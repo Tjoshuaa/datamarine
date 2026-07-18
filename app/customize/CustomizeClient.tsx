@@ -276,17 +276,17 @@ export default function CustomizePage() {
         onChange={e => setNotes(e.target.value)}
       />
 
-      <div className="bg-gray-100 p-6 rounded">
+      <div className="bg-blue-950 p-6 rounded border border-blue-800 text-white">
 
-        <p>Boat: ₦{boatPrice.toLocaleString()}</p>
-        <p>Engine: ₦{enginePrice.toLocaleString()}</p>
-        <p>Add-ons: ₦{addonPrice.toLocaleString()}</p>
+        <p className="text-white">Boat: ₦{boatPrice.toLocaleString()}</p>
+<p className="text-white">Engine: ₦{enginePrice.toLocaleString()}</p>
+<p className="text-white">Add-ons: ₦{addonPrice.toLocaleString()}</p>
 
-        <hr className="my-3" />
+        <hr className="my-3 border-blue-700" />
 
-        <p className="text-2xl font-bold">
+        <div className="bg-gradient-to-br from-slate-900 to-blue-950 p-6 rounded-xl border border-blue-700 shadow-2xl text-white">
           Total: ₦{total.toLocaleString()}
-        </p>
+        </div>
 
         <button
           onClick={sendQuote}
