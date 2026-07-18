@@ -4,96 +4,255 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { uploadProductImage } from '@/lib/storage'
+
 export default function NewProductPage() {
+
   const router = useRouter()
 
   const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
+  const [brand, setBrand] = useState('')
   const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+  const [specifications, setSpecifications] = useState('')
   const [stock, setStock] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
-const [image, setImage] = useState<File | null>(null)
+
+  const [featured, setFeatured] = useState(false)
+
+  const [image, setImage] = useState<File | null>(null)
+  const [preview, setPreview] = useState('')
+
+  const [loading, setLoading] = useState(false)
+
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    setImage(file)
+    setPreview(URL.createObjectURL(file))
+
+  }
+
+
   async function createProduct() {
-  let uploadedImageUrl = ''
 
-  if (image) {
-    uploadedImageUrl = await uploadProductImage(image)
+    try {
+
+      setLoading(true)
+
+      let imageUrl = ''
+
+
+      if (image) {
+
+        imageUrl = await uploadProductImage(image)
+
+      }
+
+
+      const product = {
+
+        name,
+
+        brand,
+
+        category,
+
+        description,
+
+        specifications,
+
+        stock: Number(stock),
+
+        price: 0,
+
+        hide_price: true,
+
+        featured,
+
+        image_url: imageUrl,
+
+        active: true
+
+      }
+
+
+      console.log("Sending product:", product)
+
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert(product)
+        .select()
+
+
+      if (error) {
+
+        console.log(error)
+
+        alert(
+          "SUPABASE ERROR:\n\n" +
+          error.message
+        )
+
+        return
+
+      }
+
+
+      console.log(data)
+
+
+      alert("Product created successfully")
+
+
+      router.push('/admin/products')
+
+
+    }
+
+    catch(error:any) {
+
+
+      console.log(error)
+
+
+      alert(
+        "SYSTEM ERROR:\n\n" +
+        error.message
+      )
+
+
+    }
+
+
+    finally {
+
+      setLoading(false)
+
+    }
+
   }
 
-  const { error } = await supabase.from('products').insert({
-    name,
-    price: Number(price),
-    category,
-    stock: Number(stock),
-    image_url: uploadedImageUrl,
-    active: true,
-  })
 
-  if (error) {
-    alert(error.message)
-    return
-  }
-
-  router.push('/admin/products')
-}
 
   return (
+
     <main className="min-h-screen bg-black text-white p-10">
 
+
       <h1 className="text-4xl font-bold mb-8">
-        Add Product (Admin)
+        Add Product
       </h1>
 
-      <div className="space-y-4 max-w-xl">
+
+      <div className="max-w-xl space-y-4">
+
 
         <input
-          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded"
+          className="w-full p-3 bg-zinc-900 border rounded"
           placeholder="Product Name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={e=>setName(e.target.value)}
         />
 
+
         <input
-          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded"
-          placeholder="Price"
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Brand"
+          value={brand}
+          onChange={e=>setBrand(e.target.value)}
         />
 
-        
 
         <input
-          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded"
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Category"
+          value={category}
+          onChange={e=>setCategory(e.target.value)}
+        />
+
+
+        <textarea
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Description"
+          value={description}
+          onChange={e=>setDescription(e.target.value)}
+        />
+
+
+        <textarea
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Specifications / Compatible Models"
+          value={specifications}
+          onChange={e=>setSpecifications(e.target.value)}
+        />
+
+
+        <input
+          className="w-full p-3 bg-zinc-900 border rounded"
           placeholder="Stock"
           type="number"
           value={stock}
-          onChange={(e) => setStock(e.target.value)}
-        />
-<input
-  type="file"
-  accept="image/*"
-  className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded"
-  onChange={(e) =>
-    setImage(e.target.files?.[0] || null)
-  }
-/>
-        <input
-          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded"
-          placeholder="Image URL"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
+          onChange={e=>setStock(e.target.value)}
         />
 
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImage}
+        />
+
+
+        {preview && (
+
+          <img
+            src={preview}
+            alt="preview"
+            className="w-40 h-40 object-cover rounded"
+          />
+
+        )}
+
+
+
+        <label className="flex gap-2 items-center">
+
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={e=>setFeatured(e.target.checked)}
+          />
+
+          Featured Product
+
+        </label>
+
+
+
         <button
+
           onClick={createProduct}
-          className="w-full bg-green-600 hover:bg-green-700 py-3 rounded"
+
+          disabled={loading}
+
+          className="w-full bg-green-600 py-3 rounded font-bold"
+
         >
-          Create Product
+
+          {loading ? "Creating..." : "Create Product"}
+
         </button>
+
 
       </div>
 
+
     </main>
+
   )
+
 }
