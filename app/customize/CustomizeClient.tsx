@@ -46,7 +46,7 @@ export default function CustomizePage() {
   const buildId = searchParams.get('build')
 
   const addonOptions: Addon[] = [
-    { name: 'GPS System', price: 200000 },
+    { name: 'GPS System', price: 1700000 },
     { name: 'LED Lights', price: 150000 },
     { name: 'Fishing Kit', price: 300000 },
     { name: 'Luxury Seats', price: 250000 }
@@ -54,7 +54,7 @@ export default function CustomizePage() {
 
   const colors = [
     { name: 'Blue', value: 'blue' },
-    { name: 'White', value: 'white' },
+    { name: 'White', value: 'grey' },
     { name: 'Black', value: 'black' },
     { name: 'Red', value: 'red' }
   ]
@@ -183,7 +183,7 @@ export default function CustomizePage() {
         style={{
           background:
             color === 'blue' ? '#1e3a8a' :
-            color === 'white' ? '#e5e7eb' :
+            color === 'grey' ? '#e5e7eb' :
             color === 'black' ? '#111827' :
             '#b91c1c'
         }}
