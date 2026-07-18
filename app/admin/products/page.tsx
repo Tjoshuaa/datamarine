@@ -1,126 +1,239 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
+import { uploadProductImage } from '@/lib/storage'
 
-type Product = {
-  id: number
-  name: string
-  price: number
-  stock: number
-  category: string
-  image_url: string
-  active: boolean
-}
+export default function NewProductPage() {
 
-export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const router = useRouter()
 
-  useEffect(() => {
-    loadProducts()
-  }, [])
+  const [name, setName] = useState('')
+  const [brand, setBrand] = useState('')
+  const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+  const [specifications, setSpecifications] = useState('')
+  const [stock, setStock] = useState('')
 
-  async function loadProducts() {
-    const { data } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false })
+  const [featured, setFeatured] = useState(false)
 
-    setProducts(data || [])
+  const [image, setImage] = useState<File | null>(null)
+  const [preview, setPreview] = useState('')
+
+  const [loading, setLoading] = useState(false)
+
+
+  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    setImage(file)
+
+    setPreview(URL.createObjectURL(file))
   }
 
-  async function deleteProduct(id: number) {
-    await supabase.from('products').delete().eq('id', id)
-    loadProducts()
+
+  async function createProduct() {
+
+    try {
+
+      setLoading(true)
+
+      let imageUrl = ''
+
+
+      if (image) {
+        imageUrl = await uploadProductImage(image)
+      }
+
+
+      const { error } = await supabase
+        .from('products')
+        .insert({
+
+          name,
+
+          brand,
+
+          category,
+
+          description,
+
+          specifications,
+
+          stock: Number(stock),
+
+          price: 0,
+
+          hide_price: true,
+
+          featured,
+
+          image_url: imageUrl,
+
+          active: true
+
+        })
+
+
+      if (error) {
+
+        alert(error.message)
+
+        return
+
+      }
+
+
+      alert('Product created successfully')
+
+      router.push('/admin/products')
+
+
+    } catch(error) {
+
+      console.log(error)
+
+      alert('Failed creating product')
+
+    }
+
+    finally {
+
+      setLoading(false)
+
+    }
+
   }
 
-  async function toggleStock(id: number, stock: number) {
-    await supabase
-      .from('products')
-      .update({ stock: stock + 1 })
-      .eq('id', id)
-
-    loadProducts()
-  }
 
   return (
+
     <main className="min-h-screen bg-black text-white p-10">
 
-      <div className="flex justify-between items-center mb-8">
 
-        <h1 className="text-4xl font-bold">
-          Products
-        </h1>
+      <h1 className="text-4xl font-bold mb-8">
+        Add Product
+      </h1>
 
-        <Link
-          href="/admin/products/new"
-          className="bg-green-600 px-4 py-2 rounded"
+
+      <div className="max-w-xl space-y-4">
+
+
+        <input
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Product Name"
+          value={name}
+          onChange={e=>setName(e.target.value)}
+        />
+
+
+        <input
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Brand (Yamaha, NGK etc)"
+          value={brand}
+          onChange={e=>setBrand(e.target.value)}
+        />
+
+
+        <input
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Category"
+          value={category}
+          onChange={e=>setCategory(e.target.value)}
+        />
+
+
+        <textarea
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Product Description"
+          value={description}
+          onChange={e=>setDescription(e.target.value)}
+        />
+
+
+        <textarea
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Specifications / Compatible Models"
+          value={specifications}
+          onChange={e=>setSpecifications(e.target.value)}
+        />
+
+
+        <input
+          className="w-full p-3 bg-zinc-900 border rounded"
+          placeholder="Stock Quantity"
+          type="number"
+          value={stock}
+          onChange={e=>setStock(e.target.value)}
+        />
+
+
+        <div>
+
+          <label className="block mb-2">
+            Product Image
+          </label>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImage}
+          />
+
+        </div>
+
+
+
+        {preview && (
+
+          <img
+            src={preview}
+            className="w-40 h-40 object-cover rounded"
+            alt="preview"
+          />
+
+        )}
+
+
+
+        <label className="flex gap-2 items-center">
+
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={e=>setFeatured(e.target.checked)}
+          />
+
+          Featured Product
+
+        </label>
+
+
+
+        <button
+
+          onClick={createProduct}
+
+          disabled={loading}
+
+          className="w-full bg-green-600 py-3 rounded font-bold"
+
         >
-          + Add Product
-        </Link>
+
+          {loading ? 'Creating...' : 'Create Product'}
+
+        </button>
+
 
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-
-        {products.map((product) => (
-
-          <div
-            key={product.id}
-            className="bg-zinc-900 border border-zinc-800 rounded p-4"
-          >
-
-            <img
-              src={product.image_url || 'https://placehold.co/600x400'}
-              className="h-40 w-full object-cover rounded"
-            />
-
-            <h2 className="mt-3 font-bold text-lg">
-              {product.name}
-            </h2>
-
-            <p className="text-gray-400">
-              {product.category}
-            </p>
-
-            <p className="text-blue-400 font-bold mt-2">
-              ₦{Number(product.price).toLocaleString()}
-            </p>
-
-            <p className="text-sm mt-1">
-              Stock: {product.stock}
-            </p>
-
-            <p className="text-sm mt-1">
-              Status: {product.active ? 'Active' : 'Inactive'}
-            </p>
-
-            {/* ACTIONS */}
-            <div className="flex gap-2 mt-4">
-
-              <button
-                onClick={() => toggleStock(product.id, product.stock)}
-                className="bg-blue-600 px-3 py-1 rounded text-sm"
-              >
-                + Stock
-              </button>
-
-              <button
-                onClick={() => deleteProduct(product.id)}
-                className="bg-red-600 px-3 py-1 rounded text-sm"
-              >
-                Delete
-              </button>
-
-            </div>
-
-          </div>
-
-        ))}
-
-      </div>
 
     </main>
+
   )
+
 }
