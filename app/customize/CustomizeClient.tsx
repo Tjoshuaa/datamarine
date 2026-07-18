@@ -295,12 +295,23 @@ export default function CustomizePage() {
           Send Quote
         </button>
 
-        <div className="mt-6 p-4 border rounded bg-gray-50">
-          <h2 className="font-bold mb-2">Bank Transfer Details</h2>
-          <p>Bank: eco bank</p>
-          <p>Account Name: DATA MARINE NIG LTD</p>
-          <p>Account Number: 0472000141</p>
-        </div>
+        <div className="mt-6 p-4 border border-blue-900 rounded bg-blue-950 text-black">
+  <h2 className="font-bold mb-2 text-white">
+    Bank Transfer Details
+  </h2>
+
+  <p className="text-white">
+    <strong>Bank:</strong> Ecobank
+  </p>
+
+  <p className="text-white">
+    <strong>Account Name:</strong> DATA MARINE NIG LTD
+  </p>
+
+  <p className="text-white">
+    <strong>Account Number:</strong> 0472000141
+  </p>
+</div>
 
         <button
           onClick={saveBuild}
