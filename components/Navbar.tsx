@@ -9,7 +9,7 @@ export default function Navbar({
     <nav className="bg-black text-white p-4 flex justify-between">
 
       <h1 className="font-bold">
-        Datamarine
+        DATA MARINE ⚓
       </h1>
 
       <button

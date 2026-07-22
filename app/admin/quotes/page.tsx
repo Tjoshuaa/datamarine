@@ -116,7 +116,7 @@ const sendWhatsAppUpdate = (phone: string, message: string) => {
         break
 
       case 'delivered':
-        message = 'Your order has been delivered. Thank you for choosing Datamarine.'
+        message = 'Your order has been delivered. Thank you for choosing DATA MARINE.'
         break
     }
 
@@ -140,7 +140,7 @@ const sendWhatsAppUpdate = (phone: string, message: string) => {
     <div className="p-8">
 
       <h1 className="text-3xl font-bold mb-6">
-        🚤 Datamarine CRM Dashboard
+        🚤 DATA MARINE CRM Dashboard
       </h1>
 
       {/* STATS */}

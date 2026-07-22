@@ -15,7 +15,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <img
         src={
           product.image_url ||
-          "https://placehold.co/600x400?text=Datamarine"
+          "https://placehold.co/600x400?text=DATA MARINE"
         }
         alt={product.name}
         className="w-full h-56 object-cover"

@@ -30,7 +30,7 @@ export default async function ProductPage({
         <img
           src={
             product.image_url ||
-            "https://placehold.co/700x500?text=Datamarine"
+            "https://placehold.co/700x500?text=DATA MARINE"
           }
           alt={product.name}
           className="rounded-xl w-full"

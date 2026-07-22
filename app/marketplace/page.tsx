@@ -70,7 +70,7 @@ export default function MarketplacePage() {
         <div className="max-w-7xl mx-auto px-6">
 
           <h1 className="text-5xl font-bold">
-            Datamarine Marketplace
+            DATA MARINE Marketplace
           </h1>
 
 

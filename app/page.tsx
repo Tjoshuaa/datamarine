@@ -55,7 +55,7 @@ export default function HomePage() {
 
         <h2 className="text-4xl font-bold text-center">
 
-          Why Choose Datamarine?
+          Why Choose DATA MARINE?
 
         </h2>
 

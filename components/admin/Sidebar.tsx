@@ -15,7 +15,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 min-h-screen bg-slate-900 text-white p-6">
       <h2 className="text-2xl font-bold mb-8">
-        Datamarine Admin
+        DATA MARINE Admin
       </h2>
 
       <nav className="space-y-3">

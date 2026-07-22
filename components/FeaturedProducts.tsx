@@ -58,7 +58,7 @@ export default function FeaturedProducts() {
             <img
               src={
                 product.image_url ||
-                "https://placehold.co/600x400?text=Datamarine"
+                "https://placehold.co/600x400?text=DATA MARINE"
               }
               className="w-full h-56 object-cover rounded-t-xl"
               alt={product.name}
