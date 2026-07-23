@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
 import {
   getCart,
   removeFromCart,
   clearCart,
+  getCartTotal,
   CartItem,
 } from '@/lib/cart'
 
@@ -15,78 +18,148 @@ export default function CartDrawer({
 }) {
   const [items, setItems] = useState<CartItem[]>([])
 
-  useEffect(() => {
+  function refreshCart() {
     setItems(getCart())
-  }, [])
-
-  function refresh() {
-    setItems([...getCart()])
   }
 
+  useEffect(() => {
+    refreshCart()
+
+    window.addEventListener("cartUpdated", refreshCart)
+
+    return () => {
+      window.removeEventListener("cartUpdated", refreshCart)
+    }
+  }, [])
+
   return (
-    <div className="fixed right-0 top-0 w-96 h-full bg-zinc-900 border-l border-zinc-800 p-6 overflow-y-auto z-50">
+    <div className="fixed right-0 top-0 h-full w-96 bg-zinc-900 border-l border-zinc-800 p-6 overflow-y-auto z-50">
 
       {/* HEADER */}
+
       <div className="flex justify-between items-center mb-6">
 
         <h2 className="text-2xl font-bold text-white">
-          Cart
+          Shopping Cart
         </h2>
 
-        {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white text-xl"
+          className="text-gray-400 hover:text-white text-2xl"
         >
           ✕
         </button>
 
       </div>
 
-      {/* EMPTY STATE */}
+      {/* EMPTY */}
+
       {items.length === 0 && (
-        <p className="text-gray-400">
-          Cart is empty
-        </p>
+
+        <div className="text-center mt-20">
+
+          <p className="text-gray-400 mb-6">
+            Your cart is empty.
+          </p>
+
+          <Link
+            href="/marketplace"
+            onClick={onClose}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+          >
+            Continue Shopping
+          </Link>
+
+        </div>
+
       )}
 
-      {/* ITEMS */}
+      {/* PRODUCTS */}
+
       {items.map((item) => (
+
         <div
           key={item.id}
-          className="mb-4 border-b border-zinc-800 pb-4"
+          className="border-b border-zinc-800 py-5"
         >
-          <p className="text-white font-bold">
+
+          {item.image_url && (
+
+            <img
+              src={item.image_url}
+              className="w-full h-40 object-cover rounded-lg mb-3"
+            />
+
+          )}
+
+          <h3 className="text-white font-bold">
+
             {item.name}
+
+          </h3>
+
+          <p className="text-blue-400 mt-1">
+
+            ₦{Number(item.price).toLocaleString()}
+
           </p>
 
           <p className="text-gray-400">
-            ₦{item.price.toLocaleString()} × {item.quantity}
+
+            Quantity: {item.quantity}
+
           </p>
 
           <button
-            className="text-red-500 mt-2"
             onClick={() => {
               removeFromCart(item.id)
-              refresh()
             }}
+            className="mt-3 text-red-500 hover:text-red-400"
           >
             Remove
           </button>
+
         </div>
+
       ))}
 
-      {/* CLEAR CART */}
+      {/* FOOTER */}
+
       {items.length > 0 && (
-        <button
-          onClick={() => {
-            clearCart()
-            refresh()
-          }}
-          className="mt-6 w-full bg-red-600 text-white py-2 rounded"
-        >
-          Clear Cart
-        </button>
+
+        <div className="mt-8">
+
+          <div className="flex justify-between text-xl font-bold text-white mb-6">
+
+            <span>Total</span>
+
+            <span>
+
+              ₦{Number(getCartTotal()).toLocaleString()}
+
+            </span>
+
+          </div>
+
+          <Link
+            href="/checkout"
+            onClick={onClose}
+            className="block text-center w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg"
+          >
+            Proceed to Checkout
+          </Link>
+
+          <button
+            onClick={() => {
+              clearCart()
+            }}
+            className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg"
+          >
+            Clear Cart
+          </button>
+
+        </div>
+
       )}
 
     </div>
