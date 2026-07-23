@@ -1,4 +1,3 @@
-```tsx
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -21,167 +20,245 @@ type Product = {
 }
 
 export default function MarketplacePage() {
+
   const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState('')
+
 
   useEffect(() => {
     loadProducts()
   }, [])
 
+
   async function loadProducts() {
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('active', true)
       .order('created_at', { ascending: false })
 
-    if (error) {
+
+    if(error){
       console.log(error)
     }
 
+
     setProducts(data || [])
+
   }
 
-  const filtered = products.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase())
+
+  const filtered = products.filter((product)=>
+    product.name
+      .toLowerCase()
+      .includes(search.toLowerCase())
   )
 
+
   return (
+
     <main className="min-h-screen bg-black text-white">
 
-      {/* HERO */}
 
       <section className="bg-zinc-900 py-16 border-b border-zinc-800">
 
+
         <div className="max-w-7xl mx-auto px-6">
+
 
           <Link
             href="/"
-            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-lg font-semibold mb-6"
+            className="inline-block mb-6 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-lg"
           >
             ← Return to Homepage
           </Link>
+
 
           <h1 className="text-5xl font-bold">
             DATA MARINE Marketplace
           </h1>
 
+
           <p className="mt-3 text-gray-400">
             Boats • Engines • Marine Spare Parts • Generators • Accessories
           </p>
 
+
           <input
-            className="mt-8 w-full p-4 rounded-lg bg-black border border-zinc-700 focus:outline-none focus:border-blue-500"
+            className="mt-8 w-full p-4 rounded-lg bg-black border border-zinc-700"
             placeholder="Search products..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e)=>setSearch(e.target.value)}
           />
+
 
         </div>
 
+
       </section>
 
-      {/* PRODUCTS */}
+
 
       <section className="max-w-7xl mx-auto p-8">
 
+
         <div className="grid md:grid-cols-4 gap-6">
 
-          {filtered.map((product) => (
+
+          {filtered.map((product)=>(
+
 
             <div
               key={product.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-blue-500 hover:shadow-xl transition duration-300"
+              className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden"
             >
+
 
               <img
                 src={
                   product.image_url ||
-                  'https://placehold.co/600x400?text=DATA+MARINE'
+                  "https://placehold.co/600x400"
                 }
                 alt={product.name}
                 className="h-52 w-full object-cover"
               />
 
+
               <div className="p-5">
 
+
                 {product.featured && (
+
                   <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded">
+
                     Featured
+
                   </span>
+
                 )}
+
+
 
                 <h2 className="font-bold text-lg mt-3">
+
                   {product.name}
+
                 </h2>
 
+
+
                 <p className="text-gray-400 text-sm">
+
                   {product.brand}
+
                 </p>
+
+
 
                 <p className="text-gray-400 text-sm">
+
                   {product.category}
+
                 </p>
 
-                <p className="mt-3 text-sm text-gray-300 line-clamp-3">
+
+
+                <p className="mt-3 text-sm text-gray-300">
+
                   {product.description}
+
                 </p>
+
+
 
                 {product.hide_price || product.price === 0 ? (
+
                   <p className="mt-4 text-blue-400 font-bold">
+
                     Price: Request Quote
+
                   </p>
+
                 ) : (
+
                   <p className="mt-4 text-blue-400 text-xl font-bold">
+
                     ₦{Number(product.price).toLocaleString()}
+
                   </p>
+
                 )}
 
+
+
                 <p className="text-sm text-gray-400 mt-2">
+
                   Stock: {product.stock}
+
                 </p>
+
+
 
                 <Link
                   href={`/marketplace/${product.id}`}
-                  className="block mt-4 bg-blue-600 hover:bg-blue-700 py-2 rounded text-center font-semibold"
+                  className="block mt-4 bg-blue-600 hover:bg-blue-700 py-2 rounded text-center"
                 >
+
                   View Product
+
                 </Link>
+
+
 
                 {!product.hide_price && product.price > 0 && (
 
                   <button
-                    onClick={() => {
+                    onClick={()=>{
 
                       addToCart({
+
                         id: product.id,
                         name: product.name,
                         price: product.price,
                         image_url: product.image_url,
-                        quantity: 1,
+                        quantity:1
+
                       })
 
-                      alert(`${product.name} has been added to your cart.`)
+                      alert(
+                        `${product.name} added to cart`
+                      )
 
                     }}
-                    className="mt-3 w-full bg-green-600 hover:bg-green-700 py-2 rounded font-semibold"
+                    className="mt-3 w-full bg-green-600 hover:bg-green-700 py-2 rounded"
                   >
+
                     Add To Cart
+
                   </button>
 
                 )}
 
+
+
               </div>
+
 
             </div>
 
+
           ))}
+
 
         </div>
 
+
       </section>
 
+
     </main>
+
   )
+
 }
-```
