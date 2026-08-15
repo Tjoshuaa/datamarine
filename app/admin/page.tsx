@@ -8,6 +8,11 @@ export default function Dashboard() {
       emoji: '📦',
     },
     {
+  title: 'Boat Builds',
+  href: '/admin/boat-builds',
+  emoji: '🚤',
+},
+    {
       title: 'Orders',
       href: '/admin/orders',
       emoji: '🛒',
