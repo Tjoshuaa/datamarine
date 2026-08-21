@@ -12,6 +12,15 @@ export default function Footer() {
           Premium Marine Marketplace
         </p>
 
+        <a
+          href="https://www.instagram.com/datamarinebb/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-4 hover:underline"
+        >
+          Instagram: @datamarinebb
+        </a>
+
       </div>
 
     </footer>
