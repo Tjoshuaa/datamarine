@@ -11,165 +11,123 @@ type Customer = {
   created_at: string
 }
 
-export default function CustomersPage() {
-
+export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
-
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     loadCustomers()
   }, [])
 
-
   async function loadCustomers() {
+    setLoading(true)
+    setErrorMessage('')
 
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .order('created_at', {
-        ascending: false
-      })
-
+      .order('created_at', { ascending: false })
 
     if (error) {
-
-      console.log(error)
-
+      console.error('Error loading customers:', error)
+      setErrorMessage(error.message)
+      setCustomers([])
+    } else {
+      setCustomers(data || [])
     }
 
-
-    setCustomers(data || [])
-
     setLoading(false)
-
   }
 
-
-
   return (
+    <main className="max-w-7xl mx-auto p-10">
 
-    <main className="text-white">
+      <div className="flex items-center justify-between mb-10">
+        <h1 className="text-4xl font-bold">
+          Customers
+        </h1>
 
+        <button
+          onClick={loadCustomers}
+          disabled={loading}
+          className="bg-slate-900 text-white px-5 py-2 rounded-lg disabled:opacity-50"
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
+      </div>
 
-      <h1 className="text-4xl font-bold mb-8">
-        Customers
-      </h1>
+      {errorMessage && (
+        <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-700">
+          <strong>Unable to load customers:</strong>
+          <p className="mt-1">{errorMessage}</p>
+        </div>
+      )}
 
-
-
-      {loading && (
-
-        <p className="text-gray-400">
+      {loading && !errorMessage && (
+        <p className="text-gray-500">
           Loading customers...
         </p>
-
       )}
 
-
-
-      {!loading && customers.length === 0 && (
-
-        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
-
-          <p className="text-gray-400">
-            No customers yet.
-          </p>
-
+      {!loading && !errorMessage && customers.length === 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          No customers found.
         </div>
-
       )}
 
-
-
-      {customers.length > 0 && (
-
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-
+      {!loading && customers.length > 0 && (
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
 
           <table className="w-full">
 
-
-            <thead className="bg-zinc-800">
-
+            <thead className="bg-slate-900 text-white">
               <tr>
-
-                <th className="p-4 text-left">
-                  Name
-                </th>
-
-                <th className="p-4 text-left">
-                  Email
-                </th>
-
-                <th className="p-4 text-left">
-                  Phone
-                </th>
-
-                <th className="p-4 text-left">
-                  Joined
-                </th>
-
+                <th className="text-left p-4">Name</th>
+                <th className="text-left p-4">Email</th>
+                <th className="text-left p-4">Phone</th>
+                <th className="text-left p-4">Joined</th>
               </tr>
-
             </thead>
 
-
-
             <tbody>
-
 
               {customers.map(customer => (
 
                 <tr
                   key={customer.id}
-                  className="border-t border-zinc-800"
+                  className="border-b hover:bg-gray-50"
                 >
 
+                  <td className="p-4 font-medium">
+                    {customer.name || '—'}
+                  </td>
+
                   <td className="p-4">
-                    {customer.name}
+                    {customer.email || '—'}
                   </td>
 
-
-                  <td className="p-4 text-gray-300">
-                    {customer.email}
+                  <td className="p-4">
+                    {customer.phone || '—'}
                   </td>
 
-
-                  <td className="p-4 text-gray-300">
-                    {customer.phone}
+                  <td className="p-4">
+                    {customer.created_at
+                      ? new Date(customer.created_at).toLocaleDateString()
+                      : '—'}
                   </td>
-
-
-                  <td className="p-4 text-gray-400">
-
-                    {new Date(
-                      customer.created_at
-                    ).toLocaleDateString()}
-
-                  </td>
-
 
                 </tr>
 
-
               ))}
-
 
             </tbody>
 
-
           </table>
 
-
         </div>
-
       )}
 
-
-
     </main>
-
   )
-
 }
