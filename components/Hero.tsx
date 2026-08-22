@@ -27,28 +27,28 @@ export default function Hero() {
 
         <div className="mt-10 flex flex-col items-start gap-4">
 
-          <Link
-            href="/marketplace"
-            className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg font-bold transition"
-          >
-            Shop Marketplace
-          </Link>
+  <Link
+    href="/marketplace"
+    className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg font-bold transition"
+  >
+    Shop Marketplace
+  </Link>
 
-          <Link
-            href="/customize"
-            className="bg-white text-slate-900 hover:bg-gray-200 px-8 py-4 rounded-lg font-bold transition"
-          >
-            Build Your Boat
-          </Link>
+  <Link
+    href="/customize"
+    className="bg-white text-slate-900 hover:bg-gray-200 px-8 py-4 rounded-lg font-bold transition"
+  >
+    Build Your Boat
+  </Link>
 
-          <Link
-            href="/boats-built"
-            className="text-white text-sm font-semibold hover:text-blue-400 transition mt-0"
-          >
-            🚤 Boats We've Built →
-          </Link>
+  <Link
+    href="/boats-built"
+    className="bg-slate-800 border border-slate-600 text-white hover:bg-slate-700 px-8 py-4 rounded-lg font-bold transition"
+  >
+    🚤 Boats We've Built
+  </Link>
 
-        </div>
+</div>
 
       </div>
 
