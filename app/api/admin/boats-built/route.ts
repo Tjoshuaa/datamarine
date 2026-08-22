@@ -1,47 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is missing')
+}
+
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing')
+}
 
 const supabaseAdmin = createClient(
   supabaseUrl,
-  serviceRoleKey
+  supabaseServiceKey
 )
 
 const BUCKET_NAME = 'boats_built'
 
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: Request) {
   try {
-    const adminAuth =
-      request.cookies.get('admin_auth')?.value
-
-    if (adminAuth !== 'true') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const formData = await request.formData()
 
-    const file =
-      formData.get('file') as File | null
+    const file = formData.get('file')
+    const featuredValue = formData.get('featured')
 
-    const featured =
-      formData.get('featured') === 'true'
-
-    if (!file) {
+    if (!(file instanceof File)) {
       return NextResponse.json(
-        { error: 'No image provided.' },
+        { error: 'No image file was provided.' },
         { status: 400 }
       )
     }
+
+    const featured =
+      featuredValue === 'true'
 
     const extension =
       file.name
@@ -54,18 +48,16 @@ export async function POST(
         .toString(36)
         .substring(2, 9)}.${extension}`
 
-    const arrayBuffer =
+    const fileBuffer = Buffer.from(
       await file.arrayBuffer()
-
-    const buffer =
-      Buffer.from(arrayBuffer)
+    )
 
     const { error: uploadError } =
       await supabaseAdmin.storage
         .from(BUCKET_NAME)
         .upload(
           fileName,
-          buffer,
+          fileBuffer,
           {
             contentType:
               file.type || 'image/jpeg',
@@ -75,8 +67,17 @@ export async function POST(
         )
 
     if (uploadError) {
+      console.error(
+        'Storage upload error:',
+        uploadError
+      )
+
       return NextResponse.json(
-        { error: uploadError.message },
+        {
+          error:
+            uploadError.message ||
+            'Failed to upload image.',
+        },
         { status: 500 }
       )
     }
@@ -90,7 +91,7 @@ export async function POST(
     const imageUrl =
       publicUrlData.publicUrl
 
-    const { data, error: insertError } =
+    const { error: insertError } =
       await supabaseAdmin
         .from('boats_built')
         .insert({
@@ -100,36 +101,44 @@ export async function POST(
           description: null,
           featured,
         })
-        .select()
-        .single()
 
     if (insertError) {
+      console.error(
+        'Database insert error:',
+        insertError
+      )
+
+      // Remove uploaded image if database insert fails
       await supabaseAdmin.storage
         .from(BUCKET_NAME)
         .remove([fileName])
 
       return NextResponse.json(
-        { error: insertError.message },
+        {
+          error:
+            insertError.message ||
+            'Failed to save boat.',
+        },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      boat: data,
+      imageUrl,
     })
-
-  } catch (error: any) {
+  } catch (error) {
     console.error(
-      'Boats built upload error:',
+      'Boats Built API error:',
       error
     )
 
     return NextResponse.json(
       {
         error:
-          error?.message ||
-          'Upload failed.',
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong.',
       },
       { status: 500 }
     )
