@@ -8,7 +8,7 @@ export default function HomePage() {
     <main>
 
       <Hero />
-<BoatsBuilt />
+
       <FeaturedProducts />
 
       {/* HERO SECTION */}
