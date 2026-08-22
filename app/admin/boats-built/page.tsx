@@ -13,8 +13,6 @@ type BoatBuilt = {
   created_at: string
 }
 
-const BUCKET_NAME = 'boats_built'
-
 export default function BoatsBuiltAdminPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +64,6 @@ export default function BoatsBuiltAdminPage() {
 
     setSelectedFile(file)
     setPreview(URL.createObjectURL(file))
-
     setMessage('')
     setError('')
   }
@@ -78,100 +75,36 @@ export default function BoatsBuiltAdminPage() {
   }
 
   async function uploadBoat() {
-  if (!selectedFile) {
-    setError('Please select a boat picture first.')
-    return
-  }
-
-  setUploading(true)
-  setMessage('')
-  setError('')
-
-  try {
-    const formData = new FormData()
-
-    formData.append('file', selectedFile)
-    formData.append('featured', String(featured))
-
-    const response = await fetch(
-      '/api/admin/boats-built',
-      {
-        method: 'POST',
-        body: formData,
-      }
-    )
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error ||
-          'Something went wrong while uploading the picture.'
-      )
+    if (!selectedFile) {
+      setError('Please select a boat picture first.')
+      return
     }
-
-    setMessage(
-      'Boat picture uploaded successfully.'
-    )
-
-    clearSelectedFile()
-
-    await loadBoats()
-
-  } catch (err: any) {
-    console.error(err)
-
-    setError(
-      err?.message ||
-        'Something went wrong while uploading the picture.'
-    )
-  } finally {
-    setUploading(false)
-  }
-}
 
     setUploading(true)
     setMessage('')
     setError('')
 
     try {
-      const extension =
-        selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const formData = new FormData()
 
-      const fileName =
-        `boat-${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2, 9)}.${extension}`
+      formData.append('file', selectedFile)
+      formData.append('featured', String(featured))
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(fileName, selectedFile, {
-          cacheControl: '3600',
-          upsert: false,
-        })
+      const response = await fetch(
+        '/api/admin/boats-built',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
 
-      if (uploadError) {
-        throw uploadError
-      }
+      const result = await response.json()
 
-      const { data: publicUrlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(fileName)
-
-      const imageUrl = publicUrlData.publicUrl
-
-      const { error: insertError } = await supabase
-        .from('boats_built')
-        .insert({
-          image_url: imageUrl,
-          name: null,
-          type: null,
-          description: null,
-          featured,
-        })
-
-      if (insertError) {
-        throw insertError
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            'Something went wrong while uploading the picture.'
+        )
       }
 
       setMessage('Boat picture uploaded successfully.')
@@ -250,7 +183,7 @@ export default function BoatsBuiltAdminPage() {
     try {
       if (boat.image_url) {
         const marker =
-          `/storage/v1/object/public/${BUCKET_NAME}/`
+          '/storage/v1/object/public/boats_built/'
 
         const position = boat.image_url.indexOf(marker)
 
@@ -261,7 +194,7 @@ export default function BoatsBuiltAdminPage() {
 
           const { error: storageError } =
             await supabase.storage
-              .from(BUCKET_NAME)
+              .from('boats_built')
               .remove([filePath])
 
           if (storageError) {
@@ -270,10 +203,11 @@ export default function BoatsBuiltAdminPage() {
         }
       }
 
-      const { error: deleteError } = await supabase
-        .from('boats_built')
-        .delete()
-        .eq('id', boat.id)
+      const { error: deleteError } =
+        await supabase
+          .from('boats_built')
+          .delete()
+          .eq('id', boat.id)
 
       if (deleteError) {
         throw deleteError
@@ -295,12 +229,9 @@ export default function BoatsBuiltAdminPage() {
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
 
-      {/* HEADER */}
-
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
         <div>
-
           <p className="text-sm uppercase tracking-[0.25em] text-blue-400">
             DATA MARINE
           </p>
@@ -312,7 +243,6 @@ export default function BoatsBuiltAdminPage() {
           <p className="text-gray-400 mt-2">
             Showcase boats built by DATA MARINE.
           </p>
-
         </div>
 
         <button
@@ -325,26 +255,17 @@ export default function BoatsBuiltAdminPage() {
 
       </div>
 
-
-      {/* SUCCESS MESSAGE */}
-
       {message && (
         <div className="max-w-4xl mb-6 bg-green-950 border border-green-800 text-green-300 rounded-xl p-4">
           {message}
         </div>
       )}
 
-
-      {/* ERROR MESSAGE */}
-
       {error && (
         <div className="max-w-4xl mb-6 bg-red-950 border border-red-800 text-red-300 rounded-xl p-4">
           {error}
         </div>
       )}
-
-
-      {/* UPLOAD SECTION */}
 
       <section className="max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-12">
 
@@ -356,9 +277,6 @@ export default function BoatsBuiltAdminPage() {
           Upload a picture now. You can add the boat name,
           type and description later.
         </p>
-
-
-        {/* FILE SELECTOR */}
 
         <label
           htmlFor="boat-picture"
@@ -393,11 +311,7 @@ export default function BoatsBuiltAdminPage() {
 
         </label>
 
-
-        {/* PREVIEW */}
-
         {preview && (
-
           <div className="mt-6">
 
             <div className="flex items-center justify-between mb-3">
@@ -427,11 +341,7 @@ export default function BoatsBuiltAdminPage() {
             </div>
 
           </div>
-
         )}
-
-
-        {/* FEATURED */}
 
         <label className="flex items-center gap-3 mt-6 cursor-pointer">
 
@@ -448,9 +358,6 @@ export default function BoatsBuiltAdminPage() {
 
         </label>
 
-
-        {/* UPLOAD BUTTON */}
-
         <button
           type="button"
           onClick={uploadBoat}
@@ -463,9 +370,6 @@ export default function BoatsBuiltAdminPage() {
         </button>
 
       </section>
-
-
-      {/* GALLERY */}
 
       <section>
 
@@ -482,18 +386,13 @@ export default function BoatsBuiltAdminPage() {
 
         </div>
 
-
         {loading && boats.length === 0 && (
-
           <div className="text-center py-16 text-gray-500">
             Loading...
           </div>
-
         )}
 
-
         {!loading && boats.length === 0 && (
-
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
 
             <div className="text-6xl mb-4">
@@ -509,12 +408,9 @@ export default function BoatsBuiltAdminPage() {
             </p>
 
           </div>
-
         )}
 
-
         {boats.length > 0 && (
-
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
             {boats.map(boat => (
@@ -524,12 +420,9 @@ export default function BoatsBuiltAdminPage() {
                 className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"
               >
 
-                {/* IMAGE */}
-
                 <div className="aspect-[4/3] bg-black">
 
                   {boat.image_url ? (
-
                     <img
                       src={boat.image_url}
                       alt={
@@ -538,19 +431,13 @@ export default function BoatsBuiltAdminPage() {
                       }
                       className="w-full h-full object-cover"
                     />
-
                   ) : (
-
                     <div className="h-full flex items-center justify-center text-gray-600">
                       No image
                     </div>
-
                   )}
 
                 </div>
-
-
-                {/* DETAILS */}
 
                 <div className="p-5">
 
@@ -578,7 +465,9 @@ export default function BoatsBuiltAdminPage() {
 
                       <textarea
                         value={editDescription}
-                        onChange={e => setEditDescription(e.target.value)}
+                        onChange={e =>
+                          setEditDescription(e.target.value)
+                        }
                         placeholder="Boat Description"
                         rows={4}
                         className="w-full bg-black border border-slate-700 rounded-lg p-3 mb-3 resize-none"
@@ -600,7 +489,6 @@ export default function BoatsBuiltAdminPage() {
                         </span>
 
                       </label>
-
 
                       <div className="grid grid-cols-2 gap-3">
 
@@ -631,11 +519,9 @@ export default function BoatsBuiltAdminPage() {
                     <>
 
                       {boat.featured && (
-
                         <span className="inline-block bg-yellow-400 text-black px-2 py-1 rounded text-xs font-bold mb-3">
                           Featured
                         </span>
-
                       )}
 
                       <h3 className="font-bold text-lg">
@@ -654,7 +540,6 @@ export default function BoatsBuiltAdminPage() {
                           {boat.description}
                         </p>
                       )}
-
 
                       <div className="grid grid-cols-2 gap-3 mt-5">
 
@@ -691,7 +576,6 @@ export default function BoatsBuiltAdminPage() {
             ))}
 
           </div>
-
         )}
 
       </section>
