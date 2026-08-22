@@ -10,13 +10,16 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
 
   async function handleLogin() {
-    const success = loginAdmin(password)
+  setError('')
 
-    if (success) {
-      router.replace('/admin/orders')
-    } else {
-      setError('Wrong password')
-    }
+  const success = await loginAdmin(password)
+
+  if (success) {
+    router.replace('/admin/orders')
+  } else {
+    setError('Wrong password')
+  }
+}
   }
 
   return (
