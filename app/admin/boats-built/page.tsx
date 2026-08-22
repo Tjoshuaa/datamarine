@@ -78,10 +78,57 @@ export default function BoatsBuiltAdminPage() {
   }
 
   async function uploadBoat() {
-    if (!selectedFile) {
-      setError('Please select a boat picture first.')
-      return
+  if (!selectedFile) {
+    setError('Please select a boat picture first.')
+    return
+  }
+
+  setUploading(true)
+  setMessage('')
+  setError('')
+
+  try {
+    const formData = new FormData()
+
+    formData.append('file', selectedFile)
+    formData.append('featured', String(featured))
+
+    const response = await fetch(
+      '/api/admin/boats-built',
+      {
+        method: 'POST',
+        body: formData,
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error ||
+          'Something went wrong while uploading the picture.'
+      )
     }
+
+    setMessage(
+      'Boat picture uploaded successfully.'
+    )
+
+    clearSelectedFile()
+
+    await loadBoats()
+
+  } catch (err: any) {
+    console.error(err)
+
+    setError(
+      err?.message ||
+        'Something went wrong while uploading the picture.'
+    )
+  } finally {
+    setUploading(false)
+  }
+}
 
     setUploading(true)
     setMessage('')
