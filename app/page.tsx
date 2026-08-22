@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import FeaturedProducts from "@/components/FeaturedProducts";
-import BoatsBuilt from "@/components/BoatsBuilt";
 
 export default function HomePage() {
   return (
@@ -10,52 +9,6 @@ export default function HomePage() {
       <Hero />
 
       <FeaturedProducts />
-
-      {/* HERO SECTION */}
-
-      <section className="bg-slate-900 text-white">
-
-        <div className="max-w-7xl mx-auto px-6 py-28">
-
-          <h1 className="text-6xl font-bold leading-tight">
-            Premium Boats
-            <br />
-            Marine Engines
-            <br />
-            Accessories
-          </h1>
-
-          <p className="mt-8 text-xl max-w-2xl text-gray-300">
-            DATA MARINE ⚓ is Nigeria's trusted marine marketplace
-            for boats, engines, safety equipment, fishing gear
-            and custom boat building.
-          </p>
-
-          <div className="mt-10 flex gap-5">
-
-            <Link
-              href="/marketplace"
-              className="bg-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-700"
-            >
-              Visit Marketplace
-            </Link>
-
-            <Link
-              href="/customize"
-              className="border border-white px-8 py-4 rounded-lg hover:bg-white hover:text-black"
-            >
-              Build Your Boat
-            </Link>
-
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* BOATS WE'VE BUILT */}
-
-      <BoatsBuilt />
 
       {/* FEATURES */}
 
