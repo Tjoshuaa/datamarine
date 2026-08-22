@@ -17,7 +17,7 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-36">
 
         <h1 className="text-6xl md:text-7xl font-bold leading-tight max-w-3xl">
-          Nigeria's Marine Marketplace
+          Nigeria's Marine Marketplace.
         </h1>
 
         <p className="mt-8 text-xl max-w-2xl">
