@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -101,15 +102,29 @@ export default function CustomizePage() {
 
   const total = boatPrice + enginePrice + addonPrice
 
-  const handleEngineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleEngineChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     const id = Number(e.target.value)
     const engine = engines.find(en => en.id === id)
     setSelectedEngine(engine || null)
   }
 
   const sendQuote = async () => {
-    if (!selectedBoat) return alert('Select boat')
-    if (!selectedEngine) return alert('Select engine')
+    if (!selectedBoat) {
+      alert('Select boat')
+      return
+    }
+
+    if (!selectedEngine) {
+      alert('Select engine')
+      return
+    }
+
+    if (!name || !phone) {
+      alert('Please enter your name and phone number')
+      return
+    }
 
     const trackingId = uuidv4()
 
@@ -138,7 +153,8 @@ export default function CustomizePage() {
       return
     }
 
-    const trackingLink = `${window.location.origin}/track/${trackingId}`
+    const trackingLink =
+      `${window.location.origin}/track/${trackingId}`
 
     alert('Quote sent successfully!')
 
@@ -157,14 +173,19 @@ export default function CustomizePage() {
   }
 
   const saveBuild = async () => {
-    if (!selectedBoat || !selectedEngine) return alert('Select boat + engine')
+    if (!selectedBoat || !selectedEngine) {
+      alert('Select boat + engine')
+      return
+    }
 
-    const { error } = await supabase.from('boat_builds').insert({
-      boat_id: selectedBoat.id,
-      engine_id: selectedEngine.id,
-      addons,
-      total_price: total
-    })
+    const { error } = await supabase
+      .from('boat_builds')
+      .insert({
+        boat_id: selectedBoat.id,
+        engine_id: selectedEngine.id,
+        addons,
+        total_price: total
+      })
 
     if (error) {
       console.log(error)
@@ -176,151 +197,338 @@ export default function CustomizePage() {
   }
 
   return (
-    <div className="p-8">
+    <main className="min-h-screen bg-black text-white">
 
-      <div
-        className="mb-6 p-6 rounded text-white font-bold text-center"
-        style={{
-          background:
-            color === 'blue' ? '#1e3a8a' :
-            color === 'grey' ? '#e5e7eb' :
-            color === 'black' ? '#111827' :
-            '#b91c1c'
-        }}
-      >
-        {selectedBoat?.name || 'Select a Boat'}
-      </div>
+      {/* TOP NAVIGATION */}
 
-      <h2 className="text-xl font-bold mb-3">Select Boat</h2>
+      <div className="border-b border-slate-800 bg-slate-950">
 
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
-        {boats.map(boat => (
-          <div
-            key={boat.id}
-            onClick={() => setSelectedBoat(boat)}
-            className={`border p-4 rounded cursor-pointer ${
-              selectedBoat?.id === boat.id ? 'border-blue-600 bg-blue-50' : ''
-            }`}
-          >
-            <h3 className="font-bold">{boat.name}</h3>
-            <p>₦{Number(boat.base_price).toLocaleString()}</p>
+        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+          <div>
+            <p className="text-sm uppercase tracking-widest text-blue-400">
+              DATA MARINE
+            </p>
+
+            <h1 className="text-2xl font-bold mt-1">
+              Build Your Boat
+            </h1>
           </div>
-        ))}
-      </div>
 
-      <h2 className="font-bold mb-2">Boat Color</h2>
-
-      <div className="flex gap-2 mb-6">
-        {colors.map(c => (
-          <button
-            key={c.value}
-            onClick={() => setColor(c.value)}
-            className={`px-3 py-1 border rounded ${
-              color === c.value ? 'bg-black text-white' : ''
-            }`}
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 bg-white text-black px-5 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
           >
-            {c.name}
-          </button>
-        ))}
-      </div>
+            ← Return to Homepage
+          </Link>
 
-      <h2 className="font-bold mb-3">Engine</h2>
-
-      <select
-        className="border p-3 w-full mb-6"
-        value={selectedEngine?.id || ''}
-        onChange={handleEngineChange}
-      >
-        <option value="">Select Engine</option>
-        {engines.map(e => (
-          <option key={e.id} value={e.id}>
-            {e.name} - ₦{Number(e.price).toLocaleString()}
-          </option>
-        ))}
-      </select>
-
-      <h2 className="font-bold mb-3">Add-ons</h2>
-
-      <div className="grid md:grid-cols-2 gap-3 mb-6">
-        {addonOptions.map(addon => (
-          <label key={addon.name} className="border p-3 flex justify-between">
-            <div>
-              <input
-                type="checkbox"
-                checked={addons.includes(addon.name)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setAddons([...addons, addon.name])
-                  } else {
-                    setAddons(addons.filter(a => a !== addon.name))
-                  }
-                }}
-              />
-              <span className="ml-2">{addon.name}</span>
-            </div>
-            <span>₦{addon.price.toLocaleString()}</span>
-          </label>
-        ))}
-      </div>
-
-      <h2 className="font-bold mb-2">Customer Details</h2>
-
-      <input className="border p-3 w-full mb-2" placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
-      <input className="border p-3 w-full mb-2" placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} />
-      <input className="border p-3 w-full mb-2" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-
-      <textarea
-        className="border p-3 w-full mb-4"
-        placeholder="Notes (optional)"
-        value={notes}
-        onChange={e => setNotes(e.target.value)}
-      />
-
-      <div className="bg-blue-950 p-6 rounded border border-blue-800 text-white">
-
-        <p className="text-white">Boat: ₦{boatPrice.toLocaleString()}</p>
-<p className="text-white">Engine: ₦{enginePrice.toLocaleString()}</p>
-<p className="text-white">Add-ons: ₦{addonPrice.toLocaleString()}</p>
-
-        <hr className="my-3 border-blue-700" />
-
-        <div className="bg-gradient-to-br from-slate-900 to-blue-950 p-6 rounded-xl border border-blue-700 shadow-2xl text-white">
-          Total: ₦{total.toLocaleString()}
         </div>
 
-        <button
-          onClick={sendQuote}
-          className="mt-4 bg-blue-600 text-white w-full py-3 rounded"
+      </div>
+
+      {/* BUILDER */}
+
+      <div className="max-w-7xl mx-auto p-6 md:p-8">
+
+        {/* BOAT PREVIEW */}
+
+        <div
+          className="mb-8 p-8 rounded-2xl text-white font-bold text-center shadow-xl"
+          style={{
+            background:
+              color === 'blue'
+                ? '#1e3a8a'
+                : color === 'grey'
+                ? '#e5e7eb'
+                : color === 'black'
+                ? '#111827'
+                : '#b91c1c'
+          }}
         >
-          Send Quote
-        </button>
+          <p className="text-sm uppercase tracking-widest opacity-70 mb-2">
+            Your Boat
+          </p>
 
-        <div className="mt-6 p-4 border border-blue-900 rounded bg-blue-950 text-black">
-  <h2 className="font-bold mb-2 text-white">
-    Bank Transfer Details
-  </h2>
+          <h2 className="text-3xl md:text-4xl">
+            {selectedBoat?.name || 'Select a Boat'}
+          </h2>
 
-  <p className="text-white">
-    <strong>Bank:</strong> Ecobank
-  </p>
+        </div>
 
-  <p className="text-white">
-    <strong>Account Name:</strong> DATA MARINE NIG LTD
-  </p>
+        {/* BOAT */}
 
-  <p className="text-white">
-    <strong>Account Number:</strong> 0472000141
-  </p>
-</div>
+        <h2 className="text-xl font-bold mb-3">
+          Select Boat
+        </h2>
 
-        <button
-          onClick={saveBuild}
-          className="mt-3 bg-black text-white w-full py-3 rounded"
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+
+          {boats.map(boat => (
+
+            <div
+              key={boat.id}
+              onClick={() => setSelectedBoat(boat)}
+              className={`border p-5 rounded-xl cursor-pointer transition ${
+                selectedBoat?.id === boat.id
+                  ? 'border-blue-500 bg-blue-950/50'
+                  : 'border-slate-700 bg-slate-900 hover:border-blue-500'
+              }`}
+            >
+
+              <h3 className="font-bold text-lg">
+                {boat.name}
+              </h3>
+
+              <p className="text-slate-400 mt-1">
+                {boat.category}
+              </p>
+
+              <p className="text-blue-400 font-bold mt-3">
+                ₦{Number(
+                  boat.base_price
+                ).toLocaleString()}
+              </p>
+
+            </div>
+
+          ))}
+
+        </div>
+
+        {/* COLOR */}
+
+        <h2 className="font-bold mb-2">
+          Boat Color
+        </h2>
+
+        <div className="flex flex-wrap gap-2 mb-8">
+
+          {colors.map(c => (
+
+            <button
+              key={c.value}
+              onClick={() => setColor(c.value)}
+              className={`px-4 py-2 border rounded-lg transition ${
+                color === c.value
+                  ? 'bg-white text-black border-white'
+                  : 'border-slate-700 bg-slate-900 hover:border-blue-500'
+              }`}
+            >
+              {c.name}
+            </button>
+
+          ))}
+
+        </div>
+
+        {/* ENGINE */}
+
+        <h2 className="font-bold mb-3">
+          Engine
+        </h2>
+
+        <select
+          className="border border-slate-700 bg-slate-900 text-white p-3 w-full mb-8 rounded-lg"
+          value={selectedEngine?.id || ''}
+          onChange={handleEngineChange}
         >
-          Save Build
-        </button>
+
+          <option value="">
+            Select Engine
+          </option>
+
+          {engines.map(e => (
+
+            <option key={e.id} value={e.id}>
+              {e.name} - ₦{Number(
+                e.price
+              ).toLocaleString()}
+            </option>
+
+          ))}
+
+        </select>
+
+        {/* ADDONS */}
+
+        <h2 className="font-bold mb-3">
+          Add-ons
+        </h2>
+
+        <div className="grid md:grid-cols-2 gap-3 mb-8">
+
+          {addonOptions.map(addon => (
+
+            <label
+              key={addon.name}
+              className="border border-slate-700 bg-slate-900 p-4 rounded-xl flex justify-between cursor-pointer hover:border-blue-500 transition"
+            >
+
+              <div>
+
+                <input
+                  type="checkbox"
+                  checked={addons.includes(addon.name)}
+                  onChange={(e) => {
+
+                    if (e.target.checked) {
+                      setAddons([
+                        ...addons,
+                        addon.name
+                      ])
+                    } else {
+                      setAddons(
+                        addons.filter(
+                          a => a !== addon.name
+                        )
+                      )
+                    }
+
+                  }}
+                />
+
+                <span className="ml-2">
+                  {addon.name}
+                </span>
+
+              </div>
+
+              <span className="text-blue-400 font-semibold">
+                ₦{addon.price.toLocaleString()}
+              </span>
+
+            </label>
+
+          ))}
+
+        </div>
+
+        {/* CUSTOMER DETAILS */}
+
+        <h2 className="font-bold mb-3">
+          Customer Details
+        </h2>
+
+        <div className="space-y-3 mb-8">
+
+          <input
+            className="border border-slate-700 bg-slate-900 text-white p-3 w-full rounded-lg"
+            placeholder="Name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
+
+          <input
+            className="border border-slate-700 bg-slate-900 text-white p-3 w-full rounded-lg"
+            placeholder="Phone"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+          />
+
+          <input
+            className="border border-slate-700 bg-slate-900 text-white p-3 w-full rounded-lg"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+
+          <textarea
+            className="border border-slate-700 bg-slate-900 text-white p-3 w-full rounded-lg"
+            placeholder="Notes (optional)"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={4}
+          />
+
+        </div>
+
+        {/* TOTAL */}
+
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-800 text-white">
+
+          <div className="space-y-2">
+
+            <p>
+              Boat:
+              <span className="float-right font-semibold">
+                ₦{boatPrice.toLocaleString()}
+              </span>
+            </p>
+
+            <p>
+              Engine:
+              <span className="float-right font-semibold">
+                ₦{enginePrice.toLocaleString()}
+              </span>
+            </p>
+
+            <p>
+              Add-ons:
+              <span className="float-right font-semibold">
+                ₦{addonPrice.toLocaleString()}
+              </span>
+            </p>
+
+          </div>
+
+          <hr className="my-4 border-blue-700" />
+
+          <div className="bg-gradient-to-br from-slate-900 to-blue-950 p-6 rounded-xl border border-blue-700 shadow-2xl">
+
+            <p className="text-sm text-blue-300">
+              Estimated Total
+            </p>
+
+            <p className="text-3xl font-bold mt-1">
+              ₦{total.toLocaleString()}
+            </p>
+
+          </div>
+
+          {/* SEND QUOTE */}
+
+          <button
+            onClick={sendQuote}
+            className="mt-5 bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-lg font-bold transition"
+          >
+            Send Quote
+          </button>
+
+          {/* BANK DETAILS */}
+
+          <div className="mt-6 p-5 border border-blue-900 rounded-xl bg-blue-950">
+
+            <h2 className="font-bold mb-3">
+              Bank Transfer Details
+            </h2>
+
+            <p>
+              <strong>Bank:</strong> Ecobank
+            </p>
+
+            <p>
+              <strong>Account Name:</strong> DATA MARINE NIG LTD
+            </p>
+
+            <p>
+              <strong>Account Number:</strong> 0472000141
+            </p>
+
+          </div>
+
+          {/* SAVE BUILD */}
+
+          <button
+            onClick={saveBuild}
+            className="mt-3 bg-black hover:bg-slate-900 border border-slate-700 text-white w-full py-3 rounded-lg font-bold transition"
+          >
+            Save Build
+          </button>
+
+        </div>
 
       </div>
-    </div>
+
+    </main>
   )
 }
