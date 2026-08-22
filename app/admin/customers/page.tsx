@@ -4,34 +4,31 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Customer = {
-  id: number
-  name: string
-  email: string
-  phone: string
   created_at: string
+  name: string | null
+  email: string | null
+  phone: string | null
 }
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
-
-  useEffect(() => {
-    loadCustomers()
-  }, [])
+  const [error, setError] = useState('')
 
   async function loadCustomers() {
     setLoading(true)
-    setErrorMessage('')
+    setError('')
 
     const { data, error } = await supabase
       .from('customers')
-      .select('*')
+      .select('created_at, name, email, phone')
       .order('created_at', { ascending: false })
 
+    console.log('Customers:', data)
+    console.log('Supabase error:', error)
+
     if (error) {
-      console.error('Error loading customers:', error)
-      setErrorMessage(error.message)
+      setError(error.message)
       setCustomers([])
     } else {
       setCustomers(data || [])
@@ -40,13 +37,23 @@ export default function AdminCustomersPage() {
     setLoading(false)
   }
 
-  return (
-    <main className="max-w-7xl mx-auto p-10">
+  useEffect(() => {
+    loadCustomers()
+  }, [])
 
-      <div className="flex items-center justify-between mb-10">
-        <h1 className="text-4xl font-bold">
-          Customers
-        </h1>
+  return (
+    <main className="max-w-7xl mx-auto p-6 md:p-10">
+
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            Customers
+          </h1>
+
+          <p className="text-gray-500 mt-2">
+            Manage your Data Marine customers
+          </p>
+        </div>
 
         <button
           onClick={loadCustomers}
@@ -57,73 +64,96 @@ export default function AdminCustomersPage() {
         </button>
       </div>
 
-      {errorMessage && (
-        <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-700">
-          <strong>Unable to load customers:</strong>
-          <p className="mt-1">{errorMessage}</p>
+      {error && (
+        <div className="bg-red-50 border border-red-300 text-red-700 p-4 rounded-lg mb-6">
+          <strong>Database error:</strong>
+          <p>{error}</p>
         </div>
       )}
 
-      {loading && !errorMessage && (
-        <p className="text-gray-500">
+      {loading && (
+        <div className="py-10 text-center">
           Loading customers...
-        </p>
-      )}
-
-      {!loading && !errorMessage && customers.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          No customers found.
         </div>
       )}
 
-      {!loading && customers.length > 0 && (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
+      {!loading && !error && customers.length === 0 && (
+        <div className="bg-white border rounded-xl p-10 text-center">
+          <h2 className="text-xl font-semibold">
+            No customers yet
+          </h2>
 
-          <table className="w-full">
+          <p className="text-gray-500 mt-2">
+            Customers will appear here when they register or place an order.
+          </p>
+        </div>
+      )}
 
-            <thead className="bg-slate-900 text-white">
-              <tr>
-                <th className="text-left p-4">Name</th>
-                <th className="text-left p-4">Email</th>
-                <th className="text-left p-4">Phone</th>
-                <th className="text-left p-4">Joined</th>
-              </tr>
-            </thead>
+      {!loading && !error && customers.length > 0 && (
+        <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
 
-            <tbody>
+          <div className="overflow-x-auto">
 
-              {customers.map(customer => (
+            <table className="w-full">
 
-                <tr
-                  key={customer.id}
-                  className="border-b hover:bg-gray-50"
-                >
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th className="text-left px-6 py-4">
+                    Name
+                  </th>
 
-                  <td className="p-4 font-medium">
-                    {customer.name || '—'}
-                  </td>
+                  <th className="text-left px-6 py-4">
+                    Email
+                  </th>
 
-                  <td className="p-4">
-                    {customer.email || '—'}
-                  </td>
+                  <th className="text-left px-6 py-4">
+                    Phone
+                  </th>
 
-                  <td className="p-4">
-                    {customer.phone || '—'}
-                  </td>
-
-                  <td className="p-4">
-                    {customer.created_at
-                      ? new Date(customer.created_at).toLocaleDateString()
-                      : '—'}
-                  </td>
-
+                  <th className="text-left px-6 py-4">
+                    Created At
+                  </th>
                 </tr>
+              </thead>
 
-              ))}
+              <tbody>
 
-            </tbody>
+                {customers.map((customer, index) => (
 
-          </table>
+                  <tr
+                    key={`${customer.email}-${index}`}
+                    className="border-b hover:bg-gray-50"
+                  >
+
+                    <td className="px-6 py-4 font-medium">
+                      {customer.name || 'No name'}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {customer.email || 'No email'}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {customer.phone || 'No phone'}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {customer.created_at
+                        ? new Date(
+                            customer.created_at
+                          ).toLocaleString()
+                        : '—'}
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
 
         </div>
       )}
