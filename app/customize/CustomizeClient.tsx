@@ -12,8 +12,6 @@ type Boat = {
   category: string
   capacity: string
   base_price: number
-  image_url?: string | null
-  color_images?: Record<string, string> | null
 }
 
 type Engine = {
@@ -23,7 +21,6 @@ type Engine = {
   stroke_type: string
   price: number
   is_new: boolean
-  image_url?: string | null
 }
 
 type Addon = {
@@ -31,31 +28,49 @@ type Addon = {
   price: number
 }
 
-const colors = [
-  { name: 'Ocean Blue', value: 'blue', hex: '#2563eb' },
-  { name: 'White', value: 'white', hex: '#f8fafc' },
-  { name: 'Black', value: 'black', hex: '#111827' },
-  { name: 'Red', value: 'red', hex: '#dc2626' },
-  { name: 'Yellow', value: 'yellow', hex: '#eab308' },
-  { name: 'Green', value: 'green', hex: '#16a34a' },
-]
-
 const addonOptions: Addon[] = [
   { name: 'GPS System', price: 1700000 },
+  { name: 'Marine Radio', price: 650000 },
+  { name: 'Display / Fish Finder', price: 850000 },
   { name: 'LED Lights', price: 150000 },
   { name: 'Fishing Kit', price: 300000 },
-  { name: 'Luxury Seats', price: 250000 },
+  { name: 'Luxury Seats', price: 250000 }
 ]
 
-export default function CustomizePage() {
+const colors = [
+  {
+    name: 'Ocean Blue',
+    value: '#1e3a8a'
+  },
+  {
+    name: 'White',
+    value: '#f8fafc'
+  },
+  {
+    name: 'Black',
+    value: '#111827'
+  },
+  {
+    name: 'Red',
+    value: '#b91c1c'
+  },
+  {
+    name: 'Grey',
+    value: '#64748b'
+  }
+]
+
+export default function CustomizeClient() {
   const [boats, setBoats] = useState<Boat[]>([])
   const [engines, setEngines] = useState<Engine[]>([])
 
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null)
-  const [selectedEngine, setSelectedEngine] = useState<Engine | null>(null)
+  const [selectedEngine, setSelectedEngine] =
+    useState<Engine | null>(null)
 
-  const [color, setColor] = useState('blue')
   const [addons, setAddons] = useState<string[]>([])
+
+  const [color, setColor] = useState('#1e3a8a')
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -64,16 +79,19 @@ export default function CustomizePage() {
 
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [showReview, setShowReview] = useState(false)
 
   const searchParams = useSearchParams()
   const buildId = searchParams.get('build')
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true)
+    loadData()
+  }, [])
 
-      const [boatsRes, enginesRes] = await Promise.all([
+  async function loadData() {
+    setLoading(true)
+
+    const [boatsRes, enginesRes] =
+      await Promise.all([
         supabase
           .from('boats')
           .select('*')
@@ -82,38 +100,45 @@ export default function CustomizePage() {
         supabase
           .from('engines')
           .select('*')
-          .order('price', { ascending: true }),
+          .order('id', { ascending: true })
       ])
 
-      if (boatsRes.error) {
-        console.error('Boats error:', boatsRes.error)
-      }
-
-      if (enginesRes.error) {
-        console.error('Engines error:', enginesRes.error)
-      }
-
-      setBoats(boatsRes.data || [])
-      setEngines(enginesRes.data || [])
-
-      setLoading(false)
+    if (boatsRes.error) {
+      console.error(
+        'Boats error:',
+        boatsRes.error
+      )
     }
 
-    loadData()
-  }, [])
+    if (enginesRes.error) {
+      console.error(
+        'Engines error:',
+        enginesRes.error
+      )
+    }
+
+    setBoats(boatsRes.data || [])
+    setEngines(enginesRes.data || [])
+
+    setLoading(false)
+  }
 
   useEffect(() => {
     async function loadBuild() {
       if (!buildId) return
 
-      const { data, error } = await supabase
-        .from('boat_builds')
-        .select('*')
-        .eq('id', buildId)
-        .single()
+      const { data, error } =
+        await supabase
+          .from('boat_builds')
+          .select('*')
+          .eq('id', buildId)
+          .single()
 
       if (error) {
-        console.error(error)
+        console.error(
+          'Build loading error:',
+          error
+        )
         return
       }
 
@@ -125,84 +150,70 @@ export default function CustomizePage() {
     loadBuild()
   }, [buildId])
 
-  const boatPrice = Number(selectedBoat?.base_price || 0)
-  const enginePrice = Number(selectedEngine?.price || 0)
+  const boatPrice = Number(
+    selectedBoat?.base_price || 0
+  )
 
-  const addonPrice = addons.reduce((total, addon) => {
-    const item = addonOptions.find(a => a.name === addon)
+  const enginePrice = Number(
+    selectedEngine?.price || 0
+  )
 
-    return total + Number(item?.price || 0)
-  }, 0)
+  const addonPrice = addons.reduce(
+    (total, addonName) => {
+      const addon =
+        addonOptions.find(
+          item => item.name === addonName
+        )
 
-  const total = boatPrice + enginePrice + addonPrice
+      return (
+        total +
+        Number(addon?.price || 0)
+      )
+    },
+    0
+  )
 
-  /*
-   * Get the image for the selected boat.
-   *
-   * If a colour-specific image exists inside color_images,
-   * use that first.
-   *
-   * Otherwise use image_url.
-   */
-  const boatImage =
-    selectedBoat?.color_images?.[color] ||
-    selectedBoat?.image_url ||
-    ''
+  const total =
+    boatPrice +
+    enginePrice +
+    addonPrice
 
-  const selectBoat = (boat: Boat) => {
+  function selectBoat(boat: Boat) {
     setSelectedBoat(boat)
-
-    /*
-     * Reset engine when changing boat so the customer
-     * deliberately chooses the engine for the new boat.
-     */
-    setSelectedEngine(null)
-
-    setShowReview(false)
   }
 
-  const selectColor = (value: string) => {
-    setColor(value)
-    setShowReview(false)
-  }
+  function selectEngine(
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) {
+    const id = Number(e.target.value)
 
-  const selectEngine = (engine: Engine) => {
+    const engine =
+      engines.find(
+        item => item.id === id
+      ) || null
+
     setSelectedEngine(engine)
-    setShowReview(false)
   }
 
-  const toggleAddon = (addonName: string) => {
-    setAddons(current => {
-      if (current.includes(addonName)) {
-        return current.filter(item => item !== addonName)
-      }
-
-      return [...current, addonName]
-    })
-
-    setShowReview(false)
-  }
-
-  const reviewBoat = () => {
-    if (!selectedBoat) {
-      alert('Please select a boat first.')
-      return
+  function toggleAddon(
+    addonName: string,
+    checked: boolean
+  ) {
+    if (checked) {
+      setAddons(current => [
+        ...current,
+        addonName
+      ])
+    } else {
+      setAddons(current =>
+        current.filter(
+          item => item !== addonName
+        )
+      )
     }
-
-    if (!selectedEngine) {
-      alert('Please select an engine.')
-      return
-    }
-
-    setShowReview(true)
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    })
   }
 
-  const sendQuote = async () => {
+  async function sendQuote() {
     if (!selectedBoat) {
       alert('Please select a boat.')
       return
@@ -213,8 +224,13 @@ export default function CustomizePage() {
       return
     }
 
-    if (!name.trim() || !phone.trim()) {
-      alert('Please enter your name and WhatsApp/phone number.')
+    if (!name.trim()) {
+      alert('Please enter your name.')
+      return
+    }
+
+    if (!phone.trim()) {
+      alert('Please enter your phone number.')
       return
     }
 
@@ -222,47 +238,67 @@ export default function CustomizePage() {
 
     const trackingId = uuidv4()
 
-    const { error } = await supabase
-      .from('quotes')
-      .insert({
-        boat_name: selectedBoat.name,
-        boat_price: selectedBoat.base_price,
+    const { error } =
+      await supabase
+        .from('quotes')
+        .insert({
+          boat_name:
+            selectedBoat.name,
 
-        engine_name: selectedEngine.name,
-        engine_price: selectedEngine.price,
+          boat_price:
+            selectedBoat.base_price,
 
-        extras: [
-          ...addons,
-          `Colour: ${colors.find(c => c.value === color)?.name || color}`,
-        ],
+          engine_name:
+            selectedEngine.name,
 
-        total_price: total,
+          engine_price:
+            selectedEngine.price,
 
-        customer_name: name,
-        customer_phone: phone,
-        customer_email: email,
+          extras: addons,
 
-        notes: notes,
+          total_price: total,
 
-        tracking_id: trackingId,
+          customer_name:
+            name,
 
-        status: 'pending',
-        payment_status: 'unpaid',
-        payment_method: 'bank_transfer',
+          customer_phone:
+            phone,
 
-        order_status: 'quote_sent',
-        order_stage: 'quote_sent',
-      })
+          customer_email:
+            email,
+
+          notes:
+            `Boat color: ${color}. ${
+              notes || ''
+            }`,
+
+          tracking_id:
+            trackingId,
+
+          status:
+            'pending',
+
+          payment_status:
+            'unpaid',
+
+          payment_method:
+            'bank_transfer',
+
+          order_status:
+            'quote_sent',
+
+          order_stage:
+            'quote_sent'
+        })
 
     if (error) {
       console.error(error)
 
       alert(
-        'We could not send your quote. Please try again.'
+        'There was a problem sending your quote. Please try again.'
       )
 
       setSending(false)
-
       return
     }
 
@@ -270,27 +306,25 @@ export default function CustomizePage() {
       `${window.location.origin}/track/${trackingId}`
 
     alert(
-      'Your boat configuration has been submitted successfully!'
+      'Your boat quote has been sent successfully!'
     )
 
-    /*
-     * Open WhatsApp for the CUSTOMER.
-     *
-     * We will later connect your DATA MARINE business
-     * WhatsApp notification separately.
-     */
     const message =
       `Hello DATA MARINE,%0A%0A` +
-      `I would like to request a quote for:%0A%0A` +
+      `I have configured a boat and would like a quote.%0A%0A` +
       `Boat: ${selectedBoat.name}%0A` +
-      `Colour: ${colors.find(c => c.value === color)?.name || color}%0A` +
+      `Color: ${color}%0A` +
       `Engine: ${selectedEngine.name}%0A` +
-      `Add-ons: ${addons.length ? addons.join(', ') : 'None'}%0A` +
       `Estimated Total: ₦${total.toLocaleString()}%0A%0A` +
-      `Track my request:%0A${trackingLink}`
+      `Customer: ${name}%0A` +
+      `Phone: ${phone}%0A` +
+      `Tracking: ${trackingLink}`
 
     window.open(
-      `https://wa.me/${phone.replace(/\D/g, '')}?text=${message}`,
+      `https://wa.me/${phone.replace(
+        /\D/g,
+        ''
+      )}?text=${message}`,
       '_blank'
     )
 
@@ -301,43 +335,102 @@ export default function CustomizePage() {
     setSelectedBoat(null)
     setSelectedEngine(null)
     setAddons([])
-    setColor('blue')
-    setShowReview(false)
+    setColor('#1e3a8a')
 
     setSending(false)
   }
 
-  const formatPrice = (price: number) =>
-    `₦${Number(price || 0).toLocaleString()}`
+  async function saveBuild() {
+    if (!selectedBoat) {
+      alert('Please select a boat.')
+      return
+    }
+
+    if (!selectedEngine) {
+      alert('Please select an engine.')
+      return
+    }
+
+    const { error } =
+      await supabase
+        .from('boat_builds')
+        .insert({
+          boat_id:
+            selectedBoat.id,
+
+          engine_id:
+            selectedEngine.id,
+
+          addons:
+            addons,
+
+          total_price:
+            total
+        })
+
+    if (error) {
+      console.error(error)
+
+      alert(
+        'Failed to save your build.'
+      )
+
+      return
+    }
+
+    alert(
+      'Your boat configuration has been saved.'
+    )
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="text-5xl mb-5">
+            🚤
+          </div>
+
+          <h1 className="text-2xl font-bold">
+            Loading Boat Builder...
+          </h1>
+
+          <p className="text-gray-500 mt-2">
+            Preparing your customization options.
+          </p>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="min-h-screen bg-black text-white">
 
       {/* HEADER */}
 
       <header className="border-b border-slate-800 bg-slate-950">
 
-        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-blue-400 font-semibold">
+            <p className="text-sm uppercase tracking-[0.25em] text-blue-400 font-semibold">
               DATA MARINE ⚓
             </p>
 
-            <h1 className="text-3xl font-bold mt-1">
+            <h1 className="text-3xl md:text-4xl font-bold mt-1">
               Build Your Boat
             </h1>
 
-            <p className="text-slate-400 mt-1">
-              Design your boat to your exact preference.
+            <p className="text-gray-500 mt-2">
+              Configure your boat to your preference.
             </p>
           </div>
 
           <Link
             href="/"
-            className="inline-flex items-center justify-center bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-slate-200 transition"
+            className="inline-flex items-center justify-center bg-white text-black px-5 py-3 rounded-xl font-semibold hover:bg-gray-200 transition"
           >
-            ← Homepage
+            ← Return Home
           </Link>
 
         </div>
@@ -345,125 +438,78 @@ export default function CustomizePage() {
       </header>
 
 
-      {/* PAGE */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8">
 
-        {loading ? (
+          {/* LEFT SIDE */}
 
-          <div className="min-h-[500px] flex items-center justify-center">
+          <div className="space-y-8">
 
-            <div className="text-center">
+            {/* BOAT PREVIEW */}
 
-              <div className="text-5xl mb-5">
-                🚤
-              </div>
+            <section className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
 
-              <p className="text-slate-400">
-                Loading boat configurator...
-              </p>
+              <div className="p-6 border-b border-slate-800">
 
-            </div>
+                <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+                  Live Preview
+                </p>
 
-          </div>
-
-        ) : (
-
-          <>
-
-            {/* LIVE PREVIEW */}
-
-            <section className="mb-12">
-
-              <div className="flex items-end justify-between mb-5">
-
-                <div>
-                  <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
-                    Live Preview
-                  </p>
-
-                  <h2 className="text-2xl md:text-3xl font-bold mt-1">
-                    Your Boat
-                  </h2>
-                </div>
-
-                {selectedBoat && (
-                  <span className="hidden sm:block text-slate-500 text-sm">
-                    Changes appear instantly
-                  </span>
-                )}
+                <h2 className="text-2xl font-bold mt-1">
+                  Your Boat
+                </h2>
 
               </div>
 
+              <div
+                className="relative min-h-[360px] flex items-center justify-center overflow-hidden"
+                style={{
+                  background:
+                    `linear-gradient(135deg, ${color} 0%, #020617 100%)`
+                }}
+              >
 
-              <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 min-h-[350px] md:min-h-[500px] flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/20" />
 
-                {/* BACKGROUND */}
+                <div className="relative z-10 text-center px-6">
 
-                <div
-                  className="absolute inset-0 opacity-30"
-                  style={{
-                    background:
-                      color === 'blue'
-                        ? 'radial-gradient(circle at center, #2563eb 0%, #020617 65%)'
-                        : color === 'white'
-                        ? 'radial-gradient(circle at center, #f8fafc 0%, #020617 65%)'
-                        : color === 'black'
-                        ? 'radial-gradient(circle at center, #475569 0%, #020617 65%)'
-                        : color === 'red'
-                        ? 'radial-gradient(circle at center, #dc2626 0%, #020617 65%)'
-                        : color === 'yellow'
-                        ? 'radial-gradient(circle at center, #eab308 0%, #020617 65%)'
-                        : 'radial-gradient(circle at center, #16a34a 0%, #020617 65%)',
-                  }}
-                />
+                  <div
+                    className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
+                    style={{
+                      backgroundColor:
+                        color,
+                      boxShadow:
+                        `0 25px 60px ${color}80`
+                    }}
+                  >
 
+                    <div className="relative w-full h-full">
 
-                {/* BOAT IMAGE */}
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
 
-                {boatImage ? (
+                      <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
 
-                  <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
-
-                    <img
-                      src={boatImage}
-                      alt={selectedBoat?.name || 'DATA MARINE boat'}
-                      className="max-h-[430px] max-w-full object-contain drop-shadow-2xl transition-all duration-500"
-                    />
-
-                    {/* ENGINE IMAGE */}
-
-                    {selectedEngine?.image_url && (
-
-                      <img
-                        src={selectedEngine.image_url}
-                        alt={selectedEngine.name}
-                        className="absolute w-24 md:w-36 right-[16%] bottom-[18%] object-contain drop-shadow-2xl pointer-events-none"
-                      />
-
-                    )}
-
-                  </div>
-
-                ) : (
-
-                  <div className="relative z-10 text-center px-6">
-
-                    <div className="text-7xl mb-5">
-                      🚤
                     </div>
 
-                    <h3 className="text-2xl font-bold">
-                      {selectedBoat?.name || 'Choose Your Boat'}
-                    </h3>
-
-                    <p className="text-slate-400 mt-2 max-w-md mx-auto">
-                      Select a boat below to see its image here.
-                    </p>
-
                   </div>
 
-                )}
+                  <p className="text-xs uppercase tracking-widest text-white/60">
+                    Selected Boat
+                  </p>
+
+                  <h2 className="text-3xl font-bold mt-2">
+                    {selectedBoat?.name ||
+                      'Select a Boat'}
+                  </h2>
+
+                  {selectedEngine && (
+                    <p className="text-white/70 mt-2">
+                      {selectedEngine.name}
+                    </p>
+                  )}
+
+                </div>
 
               </div>
 
@@ -472,7 +518,7 @@ export default function CustomizePage() {
 
             {/* BOAT SELECTION */}
 
-            <section className="mb-12">
+            <section>
 
               <div className="mb-5">
 
@@ -480,92 +526,78 @@ export default function CustomizePage() {
                   Step 1
                 </p>
 
-                <h2 className="text-2xl font-bold mt-1">
+                <h2 className="text-2xl font-bold">
                   Choose Your Boat
                 </h2>
 
-              </div>
+                <p className="text-gray-500 mt-1">
+                  Select the boat you want to customize.
+                </p>
 
+              </div>
 
               {boats.length === 0 ? (
 
-                <div className="border border-red-900 bg-red-950/40 rounded-2xl p-6 text-red-300">
-                  No boats are currently available.
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+
+                  <p className="text-gray-400">
+                    No boats are currently available.
+                  </p>
+
                 </div>
 
               ) : (
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid md:grid-cols-2 gap-4">
 
                   {boats.map(boat => (
 
                     <button
                       key={boat.id}
-                      onClick={() => selectBoat(boat)}
-                      className={`text-left overflow-hidden rounded-2xl border transition ${
+                      type="button"
+                      onClick={() =>
+                        selectBoat(boat)
+                      }
+                      className={`text-left p-5 rounded-2xl border transition ${
                         selectedBoat?.id === boat.id
-                          ? 'border-blue-500 bg-blue-950/50 ring-2 ring-blue-500/30'
+                          ? 'border-blue-500 bg-blue-950/40 ring-2 ring-blue-500/30'
                           : 'border-slate-800 bg-slate-900 hover:border-blue-500'
                       }`}
                     >
 
-                      {boat.image_url ? (
+                      <div className="flex items-start justify-between gap-4">
 
-                        <div className="h-48 bg-black">
+                        <div>
 
-                          <img
-                            src={boat.image_url}
-                            alt={boat.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <h3 className="text-xl font-bold">
+                            {boat.name}
+                          </h3>
 
-                        </div>
-
-                      ) : (
-
-                        <div className="h-48 bg-slate-950 flex items-center justify-center text-6xl">
-                          🚤
-                        </div>
-
-                      )}
-
-                      <div className="p-5">
-
-                        <div className="flex items-start justify-between gap-3">
-
-                          <div>
-
-                            <h3 className="font-bold text-lg">
-                              {boat.name}
-                            </h3>
-
-                            <p className="text-slate-400 text-sm mt-1">
-                              {boat.category}
-                            </p>
-
-                          </div>
-
-                          {selectedBoat?.id === boat.id && (
-                            <span className="bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center">
-                              ✓
-                            </span>
-                          )}
+                          <p className="text-gray-500 mt-1">
+                            {boat.category}
+                          </p>
 
                         </div>
 
-                        <div className="flex items-center justify-between mt-5">
+                        {selectedBoat?.id === boat.id && (
 
-                          <span className="text-slate-500 text-sm">
-                            {boat.capacity}
+                          <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full">
+                            Selected
                           </span>
 
-                          <span className="text-blue-400 font-bold">
-                            {formatPrice(boat.base_price)}
-                          </span>
-
-                        </div>
+                        )}
 
                       </div>
+
+                      <p className="text-gray-400 text-sm mt-4">
+                        Capacity: {boat.capacity}
+                      </p>
+
+                      <p className="text-blue-400 font-bold text-lg mt-4">
+                        ₦{Number(
+                          boat.base_price
+                        ).toLocaleString()}
+                      </p>
 
                     </button>
 
@@ -578,430 +610,468 @@ export default function CustomizePage() {
             </section>
 
 
-            {/* CUSTOMIZATION */}
+            {/* COLOR */}
 
-            <section className="grid lg:grid-cols-2 gap-10 mb-12">
+            <section>
 
-              {/* COLOUR */}
-
-              <div>
+              <div className="mb-5">
 
                 <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
                   Step 2
                 </p>
 
-                <h2 className="text-2xl font-bold mt-1 mb-5">
-                  Choose Your Colour
+                <h2 className="text-2xl font-bold">
+                  Choose Your Color
                 </h2>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-
-                  {colors.map(c => (
-
-                    <button
-                      key={c.value}
-                      onClick={() => selectColor(c.value)}
-                      className={`p-4 rounded-xl border transition ${
-                        color === c.value
-                          ? 'border-blue-500 bg-blue-950/50'
-                          : 'border-slate-800 bg-slate-900 hover:border-blue-500'
-                      }`}
-                    >
-
-                      <span
-                        className="block w-10 h-10 rounded-full mx-auto mb-3 border-2 border-white/30"
-                        style={{ backgroundColor: c.hex }}
-                      />
-
-                      <span className="text-sm font-semibold">
-                        {c.name}
-                      </span>
-
-                    </button>
-
-                  ))}
-
-                </div>
+                <p className="text-gray-500 mt-1">
+                  See your selected color reflected in the boat preview.
+                </p>
 
               </div>
 
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
 
-              {/* ENGINE */}
+                {colors.map(item => (
 
-              <div>
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() =>
+                      setColor(item.value)
+                    }
+                    className={`p-4 rounded-2xl border transition ${
+                      color === item.value
+                        ? 'border-blue-500 ring-2 ring-blue-500/30'
+                        : 'border-slate-800'
+                    }`}
+                  >
+
+                    <div
+                      className="w-full h-12 rounded-xl border border-white/10"
+                      style={{
+                        backgroundColor:
+                          item.value
+                      }}
+                    />
+
+                    <p className="text-sm font-semibold mt-3">
+                      {item.name}
+                    </p>
+
+                  </button>
+
+                ))}
+
+              </div>
+
+            </section>
+
+
+            {/* ENGINE */}
+
+            <section>
+
+              <div className="mb-5">
 
                 <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
                   Step 3
                 </p>
 
-                <h2 className="text-2xl font-bold mt-1 mb-5">
-                  Choose Your Engine
+                <h2 className="text-2xl font-bold">
+                  Select Your Engine
                 </h2>
 
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
-
-                  {engines.map(engine => (
-
-                    <button
-                      key={engine.id}
-                      onClick={() => selectEngine(engine)}
-                      className={`w-full text-left p-4 rounded-xl border transition ${
-                        selectedEngine?.id === engine.id
-                          ? 'border-blue-500 bg-blue-950/50'
-                          : 'border-slate-800 bg-slate-900 hover:border-blue-500'
-                      }`}
-                    >
-
-                      <div className="flex items-center justify-between gap-4">
-
-                        <div className="flex items-center gap-4">
-
-                          {engine.image_url ? (
-
-                            <img
-                              src={engine.image_url}
-                              alt={engine.name}
-                              className="w-16 h-16 object-contain bg-black rounded-lg"
-                            />
-
-                          ) : (
-
-                            <div className="w-16 h-16 bg-black rounded-lg flex items-center justify-center text-2xl">
-                              ⚙️
-                            </div>
-
-                          )}
-
-                          <div>
-
-                            <p className="font-bold">
-                              {engine.name}
-                            </p>
-
-                            <p className="text-slate-400 text-sm">
-                              {engine.horsepower}
-                              {engine.stroke_type
-                                ? ` • ${engine.stroke_type}`
-                                : ''}
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                        <div className="text-right">
-
-                          <p className="text-blue-400 font-bold">
-                            {formatPrice(engine.price)}
-                          </p>
-
-                          {selectedEngine?.id === engine.id && (
-                            <span className="text-green-400 text-xs">
-                              Selected ✓
-                            </span>
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    </button>
-
-                  ))}
-
-                </div>
-
               </div>
+
+              <select
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded-2xl p-4 focus:border-blue-500 outline-none"
+                value={
+                  selectedEngine?.id || ''
+                }
+                onChange={
+                  selectEngine
+                }
+              >
+
+                <option value="">
+                  Select an engine
+                </option>
+
+                {engines.map(engine => (
+
+                  <option
+                    key={engine.id}
+                    value={engine.id}
+                  >
+                    {engine.name}
+                    {engine.horsepower
+                      ? ` - ${engine.horsepower}`
+                      : ''}
+                    {' - ₦'}
+                    {Number(
+                      engine.price
+                    ).toLocaleString()}
+                  </option>
+
+                ))}
+
+              </select>
 
             </section>
 
 
             {/* ADDONS */}
 
-            <section className="mb-12">
+            <section>
 
-              <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
-                Step 4
-              </p>
+              <div className="mb-5">
 
-              <h2 className="text-2xl font-bold mt-1 mb-5">
-                Seating & Equipment
-              </h2>
+                <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+                  Step 4
+                </p>
 
-              <div className="grid md:grid-cols-2 gap-4">
+                <h2 className="text-2xl font-bold">
+                  Equipment & Extras
+                </h2>
 
-                {addonOptions.map(addon => {
+                <p className="text-gray-500 mt-1">
+                  Add the equipment you want on your boat.
+                </p>
 
-                  const selected =
-                    addons.includes(addon.name)
+              </div>
 
-                  return (
+              <div className="grid md:grid-cols-2 gap-3">
 
-                    <button
+                {addonOptions.map(
+                  addon => (
+
+                    <label
                       key={addon.name}
-                      onClick={() => toggleAddon(addon.name)}
-                      className={`text-left p-5 rounded-2xl border transition ${
-                        selected
-                          ? 'border-blue-500 bg-blue-950/50'
+                      className={`flex items-center justify-between gap-4 p-4 rounded-2xl border cursor-pointer transition ${
+                        addons.includes(
+                          addon.name
+                        )
+                          ? 'border-blue-500 bg-blue-950/30'
                           : 'border-slate-800 bg-slate-900 hover:border-blue-500'
                       }`}
                     >
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
 
-                        <div>
+                        <input
+                          type="checkbox"
+                          checked={addons.includes(
+                            addon.name
+                          )}
+                          onChange={e =>
+                            toggleAddon(
+                              addon.name,
+                              e.target.checked
+                            )
+                          }
+                          className="w-5 h-5 accent-blue-600"
+                        />
 
-                          <p className="font-bold">
-                            {addon.name}
-                          </p>
-
-                          <p className="text-slate-500 text-sm mt-1">
-                            Add to your configuration
-                          </p>
-
-                        </div>
-
-                        <div className="text-right">
-
-                          <p className="text-blue-400 font-bold">
-                            {formatPrice(addon.price)}
-                          </p>
-
-                          <span className="text-xs text-slate-500">
-                            {selected ? 'Selected ✓' : 'Select'}
-                          </span>
-
-                        </div>
+                        <span className="font-semibold">
+                          {addon.name}
+                        </span>
 
                       </div>
 
-                    </button>
+                      <span className="text-blue-400 font-semibold whitespace-nowrap">
+                        ₦{addon.price.toLocaleString()}
+                      </span>
+
+                    </label>
 
                   )
-
-                })}
+                )}
 
               </div>
 
             </section>
 
 
-            {/* REVIEW */}
+            {/* CUSTOMER */}
 
-            <section className="rounded-3xl border border-slate-800 bg-slate-900 overflow-hidden">
+            <section>
 
-              <div className="p-6 md:p-8">
+              <div className="mb-5">
 
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+                  Step 5
+                </p>
 
-                  <div>
+                <h2 className="text-2xl font-bold">
+                  Your Details
+                </h2>
 
-                    <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
-                      Step 5
-                    </p>
+                <p className="text-gray-500 mt-1">
+                  We'll use these details when responding to your quote request.
+                </p>
 
-                    <h2 className="text-2xl md:text-3xl font-bold mt-1">
-                      Review Your Boat
-                    </h2>
+              </div>
 
-                    <p className="text-slate-400 mt-2">
-                      Review your configuration before requesting a quotation.
-                    </p>
+              <div className="space-y-4">
 
-                  </div>
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={e =>
+                    setName(e.target.value)
+                  }
+                  className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
+                />
 
-                  <div className="text-left md:text-right">
+                <input
+                  type="tel"
+                  placeholder="Phone / WhatsApp Number"
+                  value={phone}
+                  onChange={e =>
+                    setPhone(e.target.value)
+                  }
+                  className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
+                />
 
-                    <p className="text-sm text-slate-500">
-                      Estimated Configuration
-                    </p>
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={e =>
+                    setEmail(e.target.value)
+                  }
+                  className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
+                />
 
-                    <p className="text-3xl font-bold text-blue-400">
-                      {formatPrice(total)}
-                    </p>
+                <textarea
+                  placeholder="Additional requirements or comments"
+                  value={notes}
+                  onChange={e =>
+                    setNotes(e.target.value)
+                  }
+                  rows={5}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 resize-none"
+                />
+
+              </div>
+
+            </section>
+
+          </div>
+
+
+          {/* RIGHT SIDE */}
+
+          <aside className="lg:sticky lg:top-6 h-fit">
+
+            <div className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
+
+              <div className="p-6 border-b border-slate-800">
+
+                <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+                  Final Review
+                </p>
+
+                <h2 className="text-2xl font-bold mt-1">
+                  Your Boat
+                </h2>
+
+              </div>
+
+
+              <div className="p-6 space-y-5">
+
+                <div className="flex justify-between gap-5">
+
+                  <span className="text-gray-500">
+                    Boat
+                  </span>
+
+                  <span className="font-semibold text-right">
+                    {selectedBoat?.name ||
+                      'Not selected'}
+                  </span>
+
+                </div>
+
+
+                <div className="flex justify-between gap-5">
+
+                  <span className="text-gray-500">
+                    Color
+                  </span>
+
+                  <div className="flex items-center gap-2">
+
+                    <span
+                      className="w-5 h-5 rounded-full border border-white/20"
+                      style={{
+                        backgroundColor:
+                          color
+                      }}
+                    />
+
+                    <span>
+                      {colors.find(
+                        item =>
+                          item.value ===
+                          color
+                      )?.name ||
+                        'Custom'}
+                    </span>
 
                   </div>
 
                 </div>
 
 
-                {showReview && selectedBoat && selectedEngine && (
+                <div className="flex justify-between gap-5">
 
-                  <div className="mt-8 grid md:grid-cols-2 gap-8">
+                  <span className="text-gray-500">
+                    Engine
+                  </span>
 
-                    <div className="bg-black rounded-2xl overflow-hidden border border-slate-800">
+                  <span className="font-semibold text-right">
+                    {selectedEngine?.name ||
+                      'Not selected'}
+                  </span>
 
-                      {boatImage ? (
+                </div>
 
-                        <img
-                          src={boatImage}
-                          alt={selectedBoat.name}
-                          className="w-full h-72 object-contain"
-                        />
 
-                      ) : (
+                <div className="border-t border-slate-800 pt-5">
 
-                        <div className="h-72 flex items-center justify-center text-7xl">
-                          🚤
-                        </div>
+                  <p className="text-gray-500 text-sm mb-3">
+                    Equipment
+                  </p>
 
+                  {addons.length === 0 ? (
+
+                    <p className="text-gray-600 text-sm">
+                      No additional equipment
+                    </p>
+
+                  ) : (
+
+                    <div className="space-y-2">
+
+                      {addons.map(
+                        addon => (
+                          <div
+                            key={addon}
+                            className="flex justify-between gap-3 text-sm"
+                          >
+                            <span>
+                              {addon}
+                            </span>
+
+                            <span className="text-blue-400">
+                              ₦{Number(
+                                addonOptions.find(
+                                  item =>
+                                    item.name ===
+                                    addon
+                                )?.price || 0
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                        )
                       )}
 
                     </div>
 
-
-                    <div className="space-y-4">
-
-                      <div className="flex justify-between border-b border-slate-800 pb-3">
-
-                        <span className="text-slate-400">
-                          Boat
-                        </span>
-
-                        <span className="font-semibold">
-                          {selectedBoat.name}
-                        </span>
-
-                      </div>
-
-                      <div className="flex justify-between border-b border-slate-800 pb-3">
-
-                        <span className="text-slate-400">
-                          Colour
-                        </span>
-
-                        <span className="font-semibold">
-                          {colors.find(c => c.value === color)?.name}
-                        </span>
-
-                      </div>
-
-                      <div className="flex justify-between border-b border-slate-800 pb-3">
-
-                        <span className="text-slate-400">
-                          Engine
-                        </span>
-
-                        <span className="font-semibold">
-                          {selectedEngine.name}
-                        </span>
-
-                      </div>
-
-                      <div className="flex justify-between border-b border-slate-800 pb-3">
-
-                        <span className="text-slate-400">
-                          Equipment
-                        </span>
-
-                        <span className="font-semibold text-right max-w-[60%]">
-                          {addons.length
-                            ? addons.join(', ')
-                            : 'None'}
-                        </span>
-
-                      </div>
-
-                      <div className="pt-3">
-
-                        <p className="text-sm text-slate-500">
-                          Estimated Price
-                        </p>
-
-                        <p className="text-4xl font-bold text-blue-400 mt-1">
-                          {formatPrice(total)}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                )}
-
-
-                {!showReview && (
-
-                  <button
-                    onClick={reviewBoat}
-                    className="w-full mt-8 bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold text-lg transition"
-                  >
-                    Review My Boat →
-                  </button>
-
-                )}
-
-              </div>
-
-
-              {/* QUOTE FORM */}
-
-              {showReview && (
-
-                <div className="border-t border-slate-800 bg-slate-950 p-6 md:p-8">
-
-                  <h3 className="text-xl font-bold">
-                    Request Your Quote
-                  </h3>
-
-                  <p className="text-slate-400 mt-1 mb-6">
-                    Tell DATA MARINE how we can contact you.
-                  </p>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-
-                    <input
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Full Name *"
-                      className="bg-slate-900 border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
-                    />
-
-                    <input
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      placeholder="WhatsApp / Phone Number *"
-                      className="bg-slate-900 border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
-                    />
-
-                    <input
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="Email Address"
-                      type="email"
-                      className="bg-slate-900 border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
-                    />
-
-                    <textarea
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
-                      placeholder="Additional requirements"
-                      rows={1}
-                      className="bg-slate-900 border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500 resize-none"
-                    />
-
-                  </div>
-
-                  <button
-                    onClick={sendQuote}
-                    disabled={sending}
-                    className="w-full mt-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 py-4 rounded-xl font-bold text-lg transition"
-                  >
-                    {sending
-                      ? 'Sending Quote...'
-                      : 'Request Quote 🚤'}
-                  </button>
+                  )}
 
                 </div>
 
-              )}
 
-            </section>
+                <div className="border-t border-slate-800 pt-5 space-y-3">
 
-          </>
+                  <div className="flex justify-between">
 
-        )}
+                    <span className="text-gray-500">
+                      Boat
+                    </span>
+
+                    <span>
+                      ₦{boatPrice.toLocaleString()}
+                    </span>
+
+                  </div>
+
+                  <div className="flex justify-between">
+
+                    <span className="text-gray-500">
+                      Engine
+                    </span>
+
+                    <span>
+                      ₦{enginePrice.toLocaleString()}
+                    </span>
+
+                  </div>
+
+                  <div className="flex justify-between">
+
+                    <span className="text-gray-500">
+                      Equipment
+                    </span>
+
+                    <span>
+                      ₦{addonPrice.toLocaleString()}
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <div className="bg-blue-950 border border-blue-800 rounded-2xl p-5">
+
+                  <p className="text-blue-300 text-sm">
+                    Estimated Total
+                  </p>
+
+                  <p className="text-3xl font-bold mt-1">
+                    ₦{total.toLocaleString()}
+                  </p>
+
+                  <p className="text-xs text-blue-300/60 mt-2">
+                    Final price will be confirmed by DATA MARINE.
+                  </p>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  onClick={sendQuote}
+                  disabled={sending}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl font-bold transition"
+                >
+                  {sending
+                    ? 'Sending Quote...'
+                    : 'Request Quote'}
+                </button>
+
+
+                <button
+                  type="button"
+                  onClick={saveBuild}
+                  className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 py-4 rounded-2xl font-bold transition"
+                >
+                  Save My Configuration
+                </button>
+
+              </div>
+
+            </div>
+
+          </aside>
+
+        </div>
 
       </div>
 
