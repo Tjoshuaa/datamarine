@@ -114,6 +114,7 @@ export default function BoatsBuiltPage() {
 
           <h2 className="text-3xl md:text-5xl font-bold mt-3">
             Built for the water. Built for the mission.
+Explore the DATA MARINE difference.
           </h2>
 
           <p className="text-gray-400 text-lg mt-5 leading-relaxed">
