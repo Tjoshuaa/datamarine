@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         },
 
         body: JSON.stringify({
-          from: 'Data Marine <onboarding@resend.dev>',
+          from: 'DATA MARINE <orders@datamarine.ng>',
 
           to: [notificationEmail],
 
