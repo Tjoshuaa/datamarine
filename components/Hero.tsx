@@ -25,20 +25,32 @@ export default function Hero() {
           Safety Gear and Custom Boat Building.
         </p>
 
-        <div className="mt-10 flex flex-wrap gap-4">
+        <div className="mt-10 flex flex-wrap items-center gap-4">
 
           <Link
             href="/marketplace"
-            className="bg-blue-600 px-8 py-4 rounded-lg font-bold"
+            className="bg-blue-600 px-8 py-4 rounded-lg font-bold hover:bg-blue-700 transition"
           >
             Shop Marketplace
           </Link>
 
           <Link
             href="/customize"
-            className="bg-white text-slate-900 px-8 py-4 rounded-lg font-bold"
+            className="bg-white text-slate-900 px-8 py-4 rounded-lg font-bold hover:bg-gray-200 transition"
           >
             Build Your Boat
+          </Link>
+
+        </div>
+
+        <div className="mt-5">
+
+          <Link
+            href="/boats-built"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-blue-400 transition"
+          >
+            🚤 Boats We've Built
+            <span>→</span>
           </Link>
 
         </div>
