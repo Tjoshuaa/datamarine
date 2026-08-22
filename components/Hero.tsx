@@ -25,9 +25,7 @@ export default function Hero() {
           Safety Gear and Custom Boat Building.
         </p>
 
-        {/* MAIN BUTTONS */}
-
-        <div className="mt-10 flex flex-wrap gap-4">
+        <div className="mt-10 flex flex-col items-start gap-4">
 
           <Link
             href="/marketplace"
@@ -43,15 +41,9 @@ export default function Hero() {
             Build Your Boat
           </Link>
 
-        </div>
-
-        {/* BOATS WE'VE BUILT */}
-
-        <div className="mt-4">
-
           <Link
             href="/boats-built"
-            className="inline-block text-white text-sm font-semibold hover:text-blue-400 transition"
+            className="text-white text-sm font-semibold hover:text-blue-400 transition mt-0"
           >
             🚤 Boats We've Built →
           </Link>
