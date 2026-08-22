@@ -13,6 +13,8 @@ type BoatBuilt = {
   created_at: string
 }
 
+const BUCKET_NAME = 'boats_built'
+
 export default function BoatsBuiltAdminPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
@@ -20,7 +22,6 @@ export default function BoatsBuiltAdminPage() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
-
   const [featured, setFeatured] = useState(false)
 
   const [message, setMessage] = useState('')
@@ -48,6 +49,7 @@ export default function BoatsBuiltAdminPage() {
     if (error) {
       console.error(error)
       setError(error.message)
+      setBoats([])
     } else {
       setBoats(data || [])
     }
@@ -64,6 +66,7 @@ export default function BoatsBuiltAdminPage() {
 
     setSelectedFile(file)
     setPreview(URL.createObjectURL(file))
+
     setMessage('')
     setError('')
   }
@@ -88,12 +91,13 @@ export default function BoatsBuiltAdminPage() {
       const extension =
         selectedFile.name.split('.').pop()?.toLowerCase() || 'jpg'
 
-      const fileName = `boat-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)}.${extension}`
+      const fileName =
+        `boat-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}.${extension}`
 
       const { error: uploadError } = await supabase.storage
-        .from('boats-built')
+        .from(BUCKET_NAME)
         .upload(fileName, selectedFile, {
           cacheControl: '3600',
           upsert: false,
@@ -104,7 +108,7 @@ export default function BoatsBuiltAdminPage() {
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from('boats-built')
+        .from(BUCKET_NAME)
         .getPublicUrl(fileName)
 
       const imageUrl = publicUrlData.publicUrl
@@ -199,7 +203,7 @@ export default function BoatsBuiltAdminPage() {
     try {
       if (boat.image_url) {
         const marker =
-          '/storage/v1/object/public/boats-built/'
+          `/storage/v1/object/public/${BUCKET_NAME}/`
 
         const position = boat.image_url.indexOf(marker)
 
@@ -208,9 +212,14 @@ export default function BoatsBuiltAdminPage() {
             position + marker.length
           )
 
-          await supabase.storage
-            .from('boats-built')
-            .remove([filePath])
+          const { error: storageError } =
+            await supabase.storage
+              .from(BUCKET_NAME)
+              .remove([filePath])
+
+          if (storageError) {
+            console.error(storageError)
+          }
         }
       }
 
@@ -270,13 +279,16 @@ export default function BoatsBuiltAdminPage() {
       </div>
 
 
-      {/* MESSAGES */}
+      {/* SUCCESS MESSAGE */}
 
       {message && (
         <div className="max-w-4xl mb-6 bg-green-950 border border-green-800 text-green-300 rounded-xl p-4">
           {message}
         </div>
       )}
+
+
+      {/* ERROR MESSAGE */}
 
       {error && (
         <div className="max-w-4xl mb-6 bg-red-950 border border-red-800 text-red-300 rounded-xl p-4">
@@ -285,7 +297,7 @@ export default function BoatsBuiltAdminPage() {
       )}
 
 
-      {/* UPLOAD */}
+      {/* UPLOAD SECTION */}
 
       <section className="max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-12">
 
@@ -297,6 +309,9 @@ export default function BoatsBuiltAdminPage() {
           Upload a picture now. You can add the boat name,
           type and description later.
         </p>
+
+
+        {/* FILE SELECTOR */}
 
         <label
           htmlFor="boat-picture"
@@ -345,6 +360,7 @@ export default function BoatsBuiltAdminPage() {
               </h3>
 
               <button
+                type="button"
                 onClick={clearSelectedFile}
                 className="text-red-400 hover:text-red-300 text-sm"
               >
@@ -386,7 +402,10 @@ export default function BoatsBuiltAdminPage() {
         </label>
 
 
+        {/* UPLOAD BUTTON */}
+
         <button
+          type="button"
           onClick={uploadBoat}
           disabled={!selectedFile || uploading}
           className="w-full mt-6 bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -399,7 +418,7 @@ export default function BoatsBuiltAdminPage() {
       </section>
 
 
-      {/* BOAT GALLERY */}
+      {/* GALLERY */}
 
       <section>
 
@@ -484,7 +503,7 @@ export default function BoatsBuiltAdminPage() {
                 </div>
 
 
-                {/* CONTENT */}
+                {/* DETAILS */}
 
                 <div className="p-5">
 
@@ -535,9 +554,11 @@ export default function BoatsBuiltAdminPage() {
 
                       </label>
 
+
                       <div className="grid grid-cols-2 gap-3">
 
                         <button
+                          type="button"
                           onClick={() =>
                             saveEdit(boat.id)
                           }
@@ -547,6 +568,7 @@ export default function BoatsBuiltAdminPage() {
                         </button>
 
                         <button
+                          type="button"
                           onClick={cancelEditing}
                           className="bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-semibold"
                         >
@@ -586,9 +608,11 @@ export default function BoatsBuiltAdminPage() {
                         </p>
                       )}
 
+
                       <div className="grid grid-cols-2 gap-3 mt-5">
 
                         <button
+                          type="button"
                           onClick={() =>
                             startEditing(boat)
                           }
@@ -598,6 +622,7 @@ export default function BoatsBuiltAdminPage() {
                         </button>
 
                         <button
+                          type="button"
                           onClick={() =>
                             deleteBoat(boat)
                           }
