@@ -9,18 +9,27 @@ export default function AdminLogin() {
 
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function handleLogin() {
+  async function handleLogin() {
     setError('')
+    setLoading(true)
 
-    const success = loginAdmin(password)
+    try {
+      const success = await loginAdmin(password)
 
-    if (success) {
-      router.replace('/admin')
-      return
+      if (success) {
+        router.replace('/admin')
+        return
+      }
+
+      setError('Wrong password')
+    } catch (err) {
+      console.error(err)
+      setError('Login failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    setError('Wrong password')
   }
 
   return (
@@ -58,7 +67,8 @@ export default function AdminLogin() {
               handleLogin()
             }
           }}
-          className="w-full bg-black border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500"
+          disabled={loading}
+          className="w-full bg-black border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 disabled:opacity-50"
         />
 
         {error && (
@@ -70,9 +80,10 @@ export default function AdminLogin() {
         <button
           type="button"
           onClick={handleLogin}
-          className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-bold transition"
+          disabled={loading}
+          className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-bold transition disabled:opacity-50"
         >
-          Login
+          {loading ? 'Logging in...' : 'Login'}
         </button>
 
       </div>
