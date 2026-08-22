@@ -4,18 +4,58 @@ export function isAdminAuthenticated() {
   return localStorage.getItem('admin_auth') === 'true'
 }
 
-export function loginAdmin(password: string) {
-  // simple password (you can change later)
+export async function loginAdmin(password: string) {
   const ADMIN_PASSWORD = '1234'
 
-  if (password === ADMIN_PASSWORD) {
-    localStorage.setItem('admin_auth', 'true')
-    return true
+  if (password !== ADMIN_PASSWORD) {
+    return false
   }
 
-  return false
+  localStorage.setItem('admin_auth', 'true')
+
+  // Create server-side admin session
+  try {
+    const response = await fetch(
+      '/api/admin/login',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      localStorage.removeItem('admin_auth')
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error(
+      'Admin login error:',
+      error
+    )
+
+    localStorage.removeItem('admin_auth')
+    return false
+  }
 }
 
-export function logoutAdmin() {
+export async function logoutAdmin() {
   localStorage.removeItem('admin_auth')
+
+  try {
+    await fetch(
+      '/api/admin/logout',
+      {
+        method: 'POST',
+      }
+    )
+  } catch (error) {
+    console.error(
+      'Admin logout error:',
+      error
+    )
+  }
 }
