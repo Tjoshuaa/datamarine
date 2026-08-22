@@ -222,6 +222,13 @@ export default function Dashboard() {
       icon: '🚤',
       description: 'Custom boat projects',
     },
+    {
+  title: "Boats We've Built",
+  value: 0,
+  href: '/admin/boats-built',
+  icon: '🛥️',
+  description: 'Manage completed boats',
+},
   ]
 
   return (
