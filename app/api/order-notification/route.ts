@@ -1,10 +1,10 @@
-import { Resend } from 'resend'
+import { NextResponse } from 'next/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
   try {
-    const order = await request.json()
+    const body = await request.json()
 
     const {
       customer_name,
@@ -13,147 +13,195 @@ export async function POST(request: Request) {
       total_price,
       tracking_id,
       order_id,
-    } = order
+    } = body
 
     if (!customer_name || !customer_phone || !order_id) {
-      return Response.json(
+      return NextResponse.json(
         {
-          error: 'Missing required order information',
+          error: 'Missing required order information.',
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       )
     }
 
-    const { data, error } = await resend.emails.send({
-      from: 'Data Marine <onboarding@resend.dev>',
+    const apiKey = process.env.RESEND_API_KEY
+    const notificationEmail =
+      process.env.ORDER_NOTIFICATION_EMAIL
 
-      to: [
-        process.env.ORDER_NOTIFICATION_EMAIL as string,
-      ],
+    if (!apiKey) {
+      console.error('RESEND_API_KEY is missing.')
 
-      subject: `🛒 New Data Marine Order #${order_id}`,
+      return NextResponse.json(
+        {
+          error: 'Email service is not configured.',
+        },
+        {
+          status: 500,
+        }
+      )
+    }
 
-      html: `
-        <div
-          style="
-            font-family: Arial, sans-serif;
-            max-width: 650px;
-            margin: 0 auto;
-            background: #f8fafc;
-            padding: 30px;
-          "
-        >
+    if (!notificationEmail) {
+      console.error(
+        'ORDER_NOTIFICATION_EMAIL is missing.'
+      )
 
-          <div
-            style="
-              background: #0f172a;
-              color: white;
-              padding: 25px;
-              border-radius: 12px;
-            "
-          >
-            <h1 style="margin: 0;">
-              DATA MARINE ⚓
-            </h1>
+      return NextResponse.json(
+        {
+          error: 'Notification email is not configured.',
+        },
+        {
+          status: 500,
+        }
+      )
+    }
 
-            <p style="margin-bottom: 0;">
-              New Order Notification
-            </p>
-          </div>
+    const response = await fetch(
+      'https://api.resend.com/emails',
+      {
+        method: 'POST',
 
-          <div
-            style="
-              background: white;
-              padding: 25px;
-              margin-top: 20px;
-              border-radius: 12px;
-            "
-          >
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
 
-            <h2>
-              🛒 New Customer Order
-            </h2>
+        body: JSON.stringify({
+          from: 'Data Marine <onboarding@resend.dev>',
 
-            <p>
-              A new order has been placed on the DATA MARINE website.
-            </p>
+          to: [notificationEmail],
 
-            <hr />
+          subject: `🛒 New Data Marine Order #${order_id}`,
 
-            <h3>
-              Customer Details
-            </h3>
-
-            <p>
-              <strong>Name:</strong>
-              ${customer_name}
-            </p>
-
-            <p>
-              <strong>Phone:</strong>
-              ${customer_phone}
-            </p>
-
-            <p>
-              <strong>Email:</strong>
-              ${customer_email || 'Not provided'}
-            </p>
-
-            <hr />
-
-            <h3>
-              Order Details
-            </h3>
-
-            <p>
-              <strong>Order ID:</strong>
-              #${order_id}
-            </p>
-
-            <p>
-              <strong>Tracking ID:</strong>
-              ${tracking_id || 'Not assigned'}
-            </p>
-
-            <p
+          html: `
+            <div
               style="
-                font-size: 24px;
-                color: #1d4ed8;
+                font-family: Arial, sans-serif;
+                max-width: 650px;
+                margin: 0 auto;
+                background: #f8fafc;
+                padding: 30px;
               "
             >
-              <strong>
-                Total: ₦${Number(total_price).toLocaleString()}
-              </strong>
-            </p>
 
-            <hr />
+              <div
+                style="
+                  background: #0f172a;
+                  color: white;
+                  padding: 25px;
+                  border-radius: 12px;
+                "
+              >
+                <h1>DATA MARINE ⚓</h1>
 
-            <p>
-              Log in to the DATA MARINE Admin Dashboard
-              to manage this order.
-            </p>
+                <p>
+                  New Order Notification
+                </p>
+              </div>
 
-          </div>
+              <div
+                style="
+                  background: white;
+                  padding: 25px;
+                  margin-top: 20px;
+                  border-radius: 12px;
+                "
+              >
 
-        </div>
-      `,
-    })
+                <h2>
+                  🛒 New Customer Order
+                </h2>
 
-    if (error) {
-      console.error('Resend error:', error)
+                <p>
+                  A new order has been placed on
+                  the DATA MARINE website.
+                </p>
 
-      return Response.json(
+                <hr />
+
+                <h3>
+                  Customer Details
+                </h3>
+
+                <p>
+                  <strong>Name:</strong>
+                  ${customer_name}
+                </p>
+
+                <p>
+                  <strong>Phone:</strong>
+                  ${customer_phone}
+                </p>
+
+                <p>
+                  <strong>Email:</strong>
+                  ${customer_email || 'Not provided'}
+                </p>
+
+                <hr />
+
+                <h3>
+                  Order Details
+                </h3>
+
+                <p>
+                  <strong>Order ID:</strong>
+                  #${order_id}
+                </p>
+
+                <p>
+                  <strong>Tracking ID:</strong>
+                  ${tracking_id || 'Not assigned'}
+                </p>
+
+                <p
+                  style="
+                    font-size: 24px;
+                    color: #1d4ed8;
+                  "
+                >
+                  <strong>
+                    Total:
+                    ₦${Number(
+                      total_price
+                    ).toLocaleString()}
+                  </strong>
+                </p>
+
+              </div>
+
+            </div>
+          `,
+        }),
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error(
+        'Resend API error:',
+        result
+      )
+
+      return NextResponse.json(
         {
-          error: error.message,
+          error:
+            result?.message ||
+            'Resend failed to send email.',
         },
-        { status: 500 }
+        {
+          status: response.status,
+        }
       )
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
-      message: 'Order notification email sent successfully.',
-      data,
+      message: 'Order notification sent.',
+      id: result.id,
     })
 
   } catch (error) {
@@ -163,11 +211,14 @@ export async function POST(request: Request) {
       error
     )
 
-    return Response.json(
+    return NextResponse.json(
       {
-        error: 'Failed to send order notification.',
+        error:
+          'Failed to send order notification.',
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     )
   }
 }
