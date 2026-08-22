@@ -90,13 +90,13 @@ export default function AdminCustomersPage() {
       )}
 
       {!loading && !error && customers.length > 0 && (
-        <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-sm">
 
           <div className="overflow-x-auto">
 
             <table className="w-full">
 
-              <thead className="bg-slate-900 text-white">
+              <thead className="bg-black text-white">
                 <tr>
                   <th className="text-left px-6 py-4">
                     Name
@@ -121,9 +121,9 @@ export default function AdminCustomersPage() {
                 {customers.map((customer, index) => (
 
                   <tr
-                    key={`${customer.email}-${index}`}
-                    className="border-b hover:bg-gray-50"
-                  >
+  key={`${customer.email}-${index}`}
+  className="border-b border-slate-700 hover:bg-slate-800"
+>
 
                     <td className="px-6 py-4 font-medium">
                       {customer.name || 'No name'}
