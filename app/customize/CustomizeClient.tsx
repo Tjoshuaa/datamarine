@@ -456,6 +456,121 @@ export default function CustomizeClient() {
     )
   }
 
+  /*
+   * -------------------------------------------------------
+   * BOAT COLOR PREVIEW
+   * -------------------------------------------------------
+   *
+   * Your current boat photos are real-world photographs.
+   * Therefore we don't recolor the entire image.
+   *
+   * Instead:
+   *
+   * 1. Keep the original photograph visible.
+   * 2. Put a color layer over the lower boat/hull region.
+   * 3. Use mix-blend-mode:multiply so the original
+   *    shadows/details remain visible.
+   *
+   * This gives a much more realistic preview than changing
+   * the entire background color.
+   *
+   * Once we create transparent boat cutouts, this same
+   * interface can be upgraded to pixel-perfect recoloring.
+   */
+
+  function BoatPreview() {
+    if (!selectedBoat?.image_url) {
+      return (
+        <div
+          className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
+          style={{
+            backgroundColor:
+              color,
+            boxShadow:
+              `0 25px 60px ${color}80`
+          }}
+        >
+          <div className="relative w-full h-full">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
+
+            <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="relative mx-auto mb-6 w-full max-w-xl h-64 overflow-hidden rounded-2xl">
+
+        {/* Original photograph */}
+
+        <img
+          src={selectedBoat.image_url}
+          alt={selectedBoat.name}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+
+        {/*
+         * Color overlay.
+         *
+         * The clip-path deliberately concentrates the
+         * recoloring toward the lower/middle boat area
+         * instead of the whole photograph.
+         */}
+
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundColor: color,
+
+            mixBlendMode:
+              color === '#f8fafc'
+                ? 'screen'
+                : 'multiply',
+
+            opacity:
+              color === '#f8fafc'
+                ? 0.42
+                : 0.58,
+
+            clipPath:
+              'polygon(8% 38%, 92% 38%, 100% 82%, 86% 96%, 14% 96%, 0% 82%)'
+          }}
+        />
+
+        {/*
+         * Soft highlight layer.
+         * Helps the colored hull retain some of the
+         * original photograph's lighting.
+         */}
+
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              `linear-gradient(
+                180deg,
+                transparent 35%,
+                ${color}25 55%,
+                ${color}55 82%,
+                transparent 100%
+              )`,
+
+            mixBlendMode:
+              'color',
+
+            opacity:
+              0.55,
+
+            clipPath:
+              'polygon(5% 35%, 95% 35%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)'
+          }}
+        />
+
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
@@ -541,52 +656,26 @@ export default function CustomizeClient() {
               </div>
 
               <div
-                className="relative min-h-[360px] flex items-center justify-center overflow-hidden"
-                style={{
-                  background:
-                    `linear-gradient(135deg, ${color} 0%, #020617 100%)`
-                }}
+                className="relative min-h-[360px] flex items-center justify-center overflow-hidden bg-slate-950"
               >
 
-                <div className="absolute inset-0 bg-black/20" />
+                {/* Ambient lighting */}
 
-                <div className="relative z-10 text-center px-6">
+                <div
+                  className="absolute inset-0 pointer-events-none transition-all duration-500"
+                  style={{
+                    background:
+                      `radial-gradient(
+                        circle at center,
+                        ${color}25 0%,
+                        transparent 65%
+                      )`
+                  }}
+                />
 
-                  {selectedBoat?.image_url ? (
+                <div className="relative z-10 text-center px-6 w-full">
 
-                    <img
-                      src={
-                        selectedBoat.image_url
-                      }
-                      alt={
-                        selectedBoat.name
-                      }
-                      className="mx-auto mb-6 w-full max-w-xl h-56 object-contain drop-shadow-2xl"
-                    />
-
-                  ) : (
-
-                    <div
-                      className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
-                      style={{
-                        backgroundColor:
-                          color,
-                        boxShadow:
-                          `0 25px 60px ${color}80`
-                      }}
-                    >
-
-                      <div className="relative w-full h-full">
-
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
-
-                        <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
-
-                      </div>
-
-                    </div>
-
-                  )}
+                  <BoatPreview />
 
                   <p className="text-xs uppercase tracking-widest text-white/60">
                     Selected Boat
@@ -667,8 +756,6 @@ export default function CustomizeClient() {
                           }`}
                         >
 
-                          {/* BOAT IMAGE */}
-
                           {boat.image_url ? (
 
                             <div className="w-full h-52 bg-white flex items-center justify-center overflow-hidden">
@@ -704,8 +791,6 @@ export default function CustomizeClient() {
                             </div>
 
                           )}
-
-                          {/* CARD DETAILS */}
 
                           <div className="p-5">
 
@@ -772,7 +857,7 @@ export default function CustomizeClient() {
                 </h2>
 
                 <p className="text-gray-500 mt-1">
-                  See your selected color reflected in the boat preview.
+                  Change the boat color in the live preview.
                 </p>
 
               </div>
@@ -1043,7 +1128,7 @@ export default function CustomizeClient() {
 
                 {selectedBoat?.image_url && (
 
-                  <div className="bg-white rounded-2xl overflow-hidden">
+                  <div className="relative bg-white rounded-2xl overflow-hidden h-40">
 
                     <img
                       src={
@@ -1052,7 +1137,28 @@ export default function CustomizeClient() {
                       alt={
                         selectedBoat.name
                       }
-                      className="w-full h-40 object-contain"
+                      className="absolute inset-0 w-full h-full object-contain"
+                    />
+
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundColor:
+                          color,
+
+                        mixBlendMode:
+                          color === '#f8fafc'
+                            ? 'screen'
+                            : 'multiply',
+
+                        opacity:
+                          color === '#f8fafc'
+                            ? 0.35
+                            : 0.5,
+
+                        clipPath:
+                          'polygon(5% 35%, 95% 35%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)'
+                      }}
                     />
 
                   </div>
