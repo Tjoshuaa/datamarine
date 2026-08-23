@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -15,7 +16,6 @@ type Boat = {
 
 export default function BoatBuildsAdminPage() {
   const [boats, setBoats] = useState<Boat[]>([])
-
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -51,18 +51,15 @@ export default function BoatBuildsAdminPage() {
     }
 
     setBoats(data || [])
-
     setLoading(false)
   }
 
   function resetForm() {
     setEditingId(null)
-
     setName('')
     setCategory('')
     setCapacity('')
     setPrice('')
-
     setImage(null)
     setPreview('')
   }
@@ -74,28 +71,28 @@ export default function BoatBuildsAdminPage() {
 
     if (!file) return
 
-    setImage(file)
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file.')
+      return
+    }
 
-    setPreview(
-      URL.createObjectURL(file)
-    )
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be smaller than 10MB.')
+      return
+    }
+
+    setImage(file)
+    setPreview(URL.createObjectURL(file))
   }
 
   function editBoat(boat: Boat) {
     setEditingId(boat.id)
-
     setName(boat.name || '')
     setCategory(boat.category || '')
     setCapacity(boat.capacity || '')
-    setPrice(
-      String(boat.base_price || '')
-    )
-
+    setPrice(String(boat.base_price || ''))
     setImage(null)
-
-    setPreview(
-      boat.image_url || ''
-    )
+    setPreview(boat.image_url || '')
 
     window.scrollTo({
       top: 0,
@@ -103,39 +100,36 @@ export default function BoatBuildsAdminPage() {
     })
   }
 
-  async function uploadBoatImage(
-    file: File
-  ) {
+  async function uploadBoatImage(file: File) {
     const extension =
-      file.name.split('.').pop() || 'jpg'
+      file.name.split('.').pop()?.toLowerCase() || 'jpg'
+
+    const safeName = file.name
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9-_]/g, '-')
+      .toLowerCase()
 
     const fileName =
-      `boat-${Date.now()}.${extension}`
+      `${Date.now()}-${safeName}.${extension}`
 
-    const { error } =
-      await supabase.storage
-        .from('boats')
-        .upload(
-          fileName,
-          file,
-          {
-            cacheControl: '3600',
-            upsert: false,
-          }
-        )
+    const filePath = `boats/${fileName}`
+
+    const { error } = await supabase.storage
+      .from('boat-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      })
 
     if (error) {
       throw error
     }
 
-    const {
-      data: publicUrl,
-    } =
+    const { data: publicUrl } =
       supabase.storage
-        .from('boats')
-        .getPublicUrl(
-          fileName
-        )
+        .from('boat-images')
+        .getPublicUrl(filePath)
 
     return publicUrl.publicUrl
   }
@@ -161,77 +155,104 @@ export default function BoatBuildsAdminPage() {
       return
     }
 
+    const numericPrice = Number(price)
+
+    if (
+      Number.isNaN(numericPrice) ||
+      numericPrice < 0
+    ) {
+      alert('Please enter a valid boat price.')
+      return
+    }
+
     setSaving(true)
 
     try {
-      let imageUrl =
-        preview || null
+      let imageUrl = preview || null
 
-      /*
-       * Upload a new image if one
-       * was selected.
-       */
       if (image) {
-        imageUrl =
-          await uploadBoatImage(image)
+        imageUrl = await uploadBoatImage(image)
       }
 
       const boatData = {
         name: name.trim(),
         category: category.trim(),
         capacity: capacity.trim(),
-        base_price: Number(price),
+        base_price: numericPrice,
         image_url: imageUrl,
       }
 
-      /*
-       * EDIT EXISTING BOAT
-       */
       if (editingId !== null) {
-        const { error } =
-          await supabase
-            .from('boats')
-            .update(boatData)
-            .eq(
-              'id',
-              editingId
-            )
+        const { error } = await supabase
+          .from('boats')
+          .update(boatData)
+          .eq('id', editingId)
 
         if (error) {
           throw error
         }
 
-        alert(
-          'Boat updated successfully.'
-        )
-      }
+        if (image && imageUrl) {
+          const { error: imageError } =
+            await supabase
+              .from('boat_images')
+              .insert({
+                boat_id: editingId,
+                image_url: imageUrl,
+                image_type: 'main',
+                sort_order: 0,
+              })
 
-      /*
-       * ADD NEW BOAT
-       */
-      else {
-        const { error } =
+          if (imageError) {
+            console.error(
+              'Could not register boat image:',
+              imageError
+            )
+          }
+        }
+
+        alert('Boat updated successfully.')
+      } else {
+        const { data: newBoat, error } =
           await supabase
             .from('boats')
-            .insert(
-              boatData
-            )
+            .insert(boatData)
+            .select('id')
+            .single()
 
         if (error) {
           throw error
         }
 
-        alert(
-          'Boat added successfully.'
-        )
+        if (
+          newBoat &&
+          image &&
+          imageUrl
+        ) {
+          const { error: imageError } =
+            await supabase
+              .from('boat_images')
+              .insert({
+                boat_id: newBoat.id,
+                image_url: imageUrl,
+                image_type: 'main',
+                sort_order: 0,
+              })
+
+          if (imageError) {
+            console.error(
+              'Could not register boat image:',
+              imageError
+            )
+          }
+        }
+
+        alert('Boat added successfully.')
       }
 
       resetForm()
-
       await loadBoats()
-    }
-
-    catch (error: any) {
+    } catch (error: any) {
       console.error(
         'Boat save error:',
         error
@@ -241,53 +262,52 @@ export default function BoatBuildsAdminPage() {
         error?.message ||
           'Something went wrong.'
       )
-    }
-
-    finally {
+    } finally {
       setSaving(false)
     }
   }
 
-  async function deleteBoat(
-    boat: Boat
-  ) {
-    const confirmed =
-      window.confirm(
-        `Delete "${boat.name}"?\n\nThis will remove the boat from the Build Your Boat selection.`
-      )
+  async function deleteBoat(boat: Boat) {
+    const confirmed = window.confirm(
+      `Delete "${boat.name}"?\n\nThis will remove the boat from the Build Your Boat selection.`
+    )
 
     if (!confirmed) return
 
     setSaving(true)
 
     try {
+      const { error: imageError } =
+        await supabase
+          .from('boat_images')
+          .delete()
+          .eq('boat_id', boat.id)
+
+      if (imageError) {
+        console.error(
+          'Could not delete boat image records:',
+          imageError
+        )
+      }
+
       const { error } =
         await supabase
           .from('boats')
           .delete()
-          .eq(
-            'id',
-            boat.id
-          )
+          .eq('id', boat.id)
 
       if (error) {
         throw error
       }
 
-      alert(
-        'Boat deleted successfully.'
-      )
+      alert('Boat deleted successfully.')
 
-      if (
-        editingId === boat.id
-      ) {
+      if (editingId === boat.id) {
         resetForm()
       }
 
       await loadBoats()
-    }
-
-    catch (error: any) {
+    } catch (error: any) {
       console.error(
         'Delete boat error:',
         error
@@ -297,9 +317,7 @@ export default function BoatBuildsAdminPage() {
         error?.message ||
           'Could not delete boat.'
       )
-    }
-
-    finally {
+    } finally {
       setSaving(false)
     }
   }
@@ -307,12 +325,8 @@ export default function BoatBuildsAdminPage() {
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
 
-      {/* HEADER */}
-
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
-
         <div>
-
           <p className="text-sm uppercase tracking-[0.25em] text-blue-400">
             DATA MARINE ⚓
           </p>
@@ -324,11 +338,9 @@ export default function BoatBuildsAdminPage() {
           <p className="text-slate-400 mt-2">
             Manage the boats customers can select in the live boat configurator.
           </p>
-
         </div>
 
         <div className="flex gap-3">
-
           <Link
             href="/customize"
             target="_blank"
@@ -343,20 +355,13 @@ export default function BoatBuildsAdminPage() {
           >
             ← Dashboard
           </Link>
-
         </div>
-
       </div>
-
-
-      {/* EDIT / ADD FORM */}
 
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-10">
 
         <div className="flex items-center justify-between gap-4 mb-6">
-
           <div>
-
             <h2 className="text-2xl font-bold">
               {editingId !== null
                 ? 'Edit Boat'
@@ -366,11 +371,9 @@ export default function BoatBuildsAdminPage() {
             <p className="text-slate-500 mt-1">
               Changes are saved directly to the live boat configurator.
             </p>
-
           </div>
 
           {editingId !== null && (
-
             <button
               type="button"
               onClick={resetForm}
@@ -378,22 +381,14 @@ export default function BoatBuildsAdminPage() {
             >
               Cancel Edit
             </button>
-
           )}
-
         </div>
-
 
         <div className="grid lg:grid-cols-2 gap-6">
 
-          {/* LEFT */}
-
           <div className="space-y-5">
 
-            {/* NAME */}
-
             <div>
-
               <label className="block text-sm font-semibold mb-2">
                 Boat Name
               </label>
@@ -407,14 +402,9 @@ export default function BoatBuildsAdminPage() {
                 placeholder="DM W19 Utility"
                 className="w-full bg-black border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
               />
-
             </div>
 
-
-            {/* CATEGORY */}
-
             <div>
-
               <label className="block text-sm font-semibold mb-2">
                 Boat Type
               </label>
@@ -423,21 +413,14 @@ export default function BoatBuildsAdminPage() {
                 type="text"
                 value={category}
                 onChange={e =>
-                  setCategory(
-                    e.target.value
-                  )
+                  setCategory(e.target.value)
                 }
                 placeholder="Speed Boat"
                 className="w-full bg-black border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
               />
-
             </div>
 
-
-            {/* CAPACITY */}
-
             <div>
-
               <label className="block text-sm font-semibold mb-2">
                 Capacity
               </label>
@@ -446,21 +429,14 @@ export default function BoatBuildsAdminPage() {
                 type="text"
                 value={capacity}
                 onChange={e =>
-                  setCapacity(
-                    e.target.value
-                  )
+                  setCapacity(e.target.value)
                 }
                 placeholder="12–16 passengers"
                 className="w-full bg-black border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
               />
-
             </div>
 
-
-            {/* PRICE */}
-
             <div>
-
               <label className="block text-sm font-semibold mb-2">
                 Boat Price (₦)
               </label>
@@ -469,33 +445,22 @@ export default function BoatBuildsAdminPage() {
                 type="number"
                 value={price}
                 onChange={e =>
-                  setPrice(
-                    e.target.value
-                  )
+                  setPrice(e.target.value)
                 }
                 placeholder="1800000"
                 className="w-full bg-black border border-slate-700 rounded-xl p-4 outline-none focus:border-blue-500"
               />
 
               {price && (
-
                 <p className="text-blue-400 mt-2 font-semibold">
-                  ₦{Number(
-                    price
-                  ).toLocaleString()}
+                  ₦{Number(price).toLocaleString()}
                 </p>
-
               )}
-
             </div>
 
           </div>
 
-
-          {/* IMAGE */}
-
           <div>
-
             <label className="block text-sm font-semibold mb-2">
               Boat Image
             </label>
@@ -503,9 +468,7 @@ export default function BoatBuildsAdminPage() {
             <div className="border border-dashed border-slate-700 rounded-2xl p-5 bg-black">
 
               {preview ? (
-
                 <div>
-
                   <img
                     src={preview}
                     alt={
@@ -518,15 +481,10 @@ export default function BoatBuildsAdminPage() {
                   <p className="text-slate-500 text-sm mt-3">
                     Select another image below to replace this image.
                   </p>
-
                 </div>
-
               ) : (
-
                 <div className="h-64 flex items-center justify-center text-center">
-
                   <div>
-
                     <div className="text-5xl mb-3">
                       🛥️
                     </div>
@@ -534,30 +492,24 @@ export default function BoatBuildsAdminPage() {
                     <p className="text-slate-400">
                       No boat image selected
                     </p>
-
                   </div>
-
                 </div>
-
               )}
 
               <input
                 type="file"
                 accept="image/*"
-                onChange={
-                  handleImage
-                }
+                onChange={handleImage}
                 className="w-full mt-5 text-sm text-slate-400 bg-slate-900 border border-slate-700 rounded-xl p-3"
               />
 
+              <p className="text-xs text-slate-600 mt-2">
+                Maximum image size: 10MB
+              </p>
             </div>
-
           </div>
 
         </div>
-
-
-        {/* SAVE */}
 
         <div className="flex flex-col md:flex-row gap-3 mt-7">
 
@@ -575,7 +527,6 @@ export default function BoatBuildsAdminPage() {
           </button>
 
           {editingId !== null && (
-
             <button
               type="button"
               onClick={resetForm}
@@ -584,22 +535,16 @@ export default function BoatBuildsAdminPage() {
             >
               Cancel
             </button>
-
           )}
 
         </div>
-
       </section>
-
-
-      {/* BOAT LIST */}
 
       <section>
 
         <div className="flex items-center justify-between mb-5">
 
           <div>
-
             <h2 className="text-2xl font-bold">
               Your Boats
             </h2>
@@ -607,27 +552,21 @@ export default function BoatBuildsAdminPage() {
             <p className="text-slate-500 mt-1">
               These are the boats currently available in Choose Your Boat.
             </p>
-
           </div>
 
           <span className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-full text-sm text-slate-400">
             {boats.length} boat
-            {boats.length === 1
-              ? ''
-              : 's'}
+            {boats.length === 1 ? '' : 's'}
           </span>
 
         </div>
 
-
         {loading ? (
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center">
-
             <p className="text-slate-400">
               Loading boats...
             </p>
-
           </div>
 
         ) : boats.length === 0 ? (
@@ -659,8 +598,6 @@ export default function BoatBuildsAdminPage() {
                 className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500 transition"
               >
 
-                {/* IMAGE */}
-
                 <div className="h-56 bg-black flex items-center justify-center">
 
                   {boat.image_url ? (
@@ -689,9 +626,6 @@ export default function BoatBuildsAdminPage() {
 
                 </div>
 
-
-                {/* DETAILS */}
-
                 <div className="p-5">
 
                   <h3 className="text-xl font-bold">
@@ -711,9 +645,6 @@ export default function BoatBuildsAdminPage() {
                       boat.base_price
                     ).toLocaleString()}
                   </p>
-
-
-                  {/* ACTIONS */}
 
                   <div className="grid grid-cols-2 gap-3 mt-5">
 
@@ -753,9 +684,6 @@ export default function BoatBuildsAdminPage() {
 
       </section>
 
-
-      {/* INFORMATION */}
-
       <section className="mt-10 bg-blue-950/30 border border-blue-900 rounded-2xl p-6">
 
         <h3 className="font-bold text-lg">
@@ -765,19 +693,16 @@ export default function BoatBuildsAdminPage() {
         <div className="grid md:grid-cols-3 gap-5 mt-5">
 
           <div>
-
             <p className="font-semibold">
               🖼️ Add Images
             </p>
 
             <p className="text-sm text-slate-500 mt-1">
-              Upload the boat image directly from your phone.
+              Upload the boat image directly from your phone or computer.
             </p>
-
           </div>
 
           <div>
-
             <p className="font-semibold">
               💰 Change Prices
             </p>
@@ -785,11 +710,9 @@ export default function BoatBuildsAdminPage() {
             <p className="text-sm text-slate-500 mt-1">
               Change the boat price whenever you want.
             </p>
-
           </div>
 
           <div>
-
             <p className="font-semibold">
               ⚡ Live Updates
             </p>
@@ -797,7 +720,6 @@ export default function BoatBuildsAdminPage() {
             <p className="text-sm text-slate-500 mt-1">
               Changes are saved directly to Supabase and appear on the live configurator without a new deployment.
             </p>
-
           </div>
 
         </div>
@@ -807,3 +729,4 @@ export default function BoatBuildsAdminPage() {
     </main>
   )
 }
+
