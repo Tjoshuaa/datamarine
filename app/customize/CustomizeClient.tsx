@@ -12,6 +12,7 @@ type Boat = {
   category: string
   capacity: string
   base_price: number
+  image_url: string | null
 }
 
 type Engine = {
@@ -64,24 +65,41 @@ export default function CustomizeClient() {
   const [boats, setBoats] = useState<Boat[]>([])
   const [engines, setEngines] = useState<Engine[]>([])
 
-  const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null)
+  const [selectedBoat, setSelectedBoat] =
+    useState<Boat | null>(null)
+
   const [selectedEngine, setSelectedEngine] =
     useState<Engine | null>(null)
 
-  const [addons, setAddons] = useState<string[]>([])
+  const [addons, setAddons] =
+    useState<string[]>([])
 
-  const [color, setColor] = useState('#1e3a8a')
+  const [color, setColor] =
+    useState('#1e3a8a')
 
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [notes, setNotes] = useState('')
+  const [name, setName] =
+    useState('')
 
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
+  const [phone, setPhone] =
+    useState('')
 
-  const searchParams = useSearchParams()
-  const buildId = searchParams.get('build')
+  const [email, setEmail] =
+    useState('')
+
+  const [notes, setNotes] =
+    useState('')
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [sending, setSending] =
+    useState(false)
+
+  const searchParams =
+    useSearchParams()
+
+  const buildId =
+    searchParams.get('build')
 
   useEffect(() => {
     loadData()
@@ -90,18 +108,26 @@ export default function CustomizeClient() {
   async function loadData() {
     setLoading(true)
 
-    const [boatsRes, enginesRes] =
-      await Promise.all([
-        supabase
-          .from('boats')
-          .select('*')
-          .order('id', { ascending: true }),
+    const [
+      boatsRes,
+      enginesRes
+    ] = await Promise.all([
+      supabase
+        .from('boats')
+        .select(
+          'id, name, category, capacity, base_price, image_url'
+        )
+        .order('id', {
+          ascending: true
+        }),
 
-        supabase
-          .from('engines')
-          .select('*')
-          .order('id', { ascending: true })
-      ])
+      supabase
+        .from('engines')
+        .select('*')
+        .order('id', {
+          ascending: true
+        })
+    ])
 
     if (boatsRes.error) {
       console.error(
@@ -117,8 +143,13 @@ export default function CustomizeClient() {
       )
     }
 
-    setBoats(boatsRes.data || [])
-    setEngines(enginesRes.data || [])
+    setBoats(
+      boatsRes.data || []
+    )
+
+    setEngines(
+      enginesRes.data || []
+    )
 
     setLoading(false)
   }
@@ -127,72 +158,89 @@ export default function CustomizeClient() {
     async function loadBuild() {
       if (!buildId) return
 
-      const { data, error } =
-        await supabase
-          .from('boat_builds')
-          .select('*')
-          .eq('id', buildId)
-          .single()
+      const {
+        data,
+        error
+      } = await supabase
+        .from('boat_builds')
+        .select('*')
+        .eq('id', buildId)
+        .single()
 
       if (error) {
         console.error(
           'Build loading error:',
           error
         )
+
         return
       }
 
       if (!data) return
 
-      setAddons(data.addons || [])
+      setAddons(
+        data.addons || []
+      )
     }
 
     loadBuild()
   }, [buildId])
 
-  const boatPrice = Number(
-    selectedBoat?.base_price || 0
-  )
+  const boatPrice =
+    Number(
+      selectedBoat?.base_price || 0
+    )
 
-  const enginePrice = Number(
-    selectedEngine?.price || 0
-  )
+  const enginePrice =
+    Number(
+      selectedEngine?.price || 0
+    )
 
-  const addonPrice = addons.reduce(
-    (total, addonName) => {
-      const addon =
-        addonOptions.find(
-          item => item.name === addonName
+  const addonPrice =
+    addons.reduce(
+      (total, addonName) => {
+        const addon =
+          addonOptions.find(
+            item =>
+              item.name === addonName
+          )
+
+        return (
+          total +
+          Number(
+            addon?.price || 0
+          )
         )
-
-      return (
-        total +
-        Number(addon?.price || 0)
-      )
-    },
-    0
-  )
+      },
+      0
+    )
 
   const total =
     boatPrice +
     enginePrice +
     addonPrice
 
-  function selectBoat(boat: Boat) {
+  function selectBoat(
+    boat: Boat
+  ) {
     setSelectedBoat(boat)
   }
 
   function selectEngine(
     e: React.ChangeEvent<HTMLSelectElement>
   ) {
-    const id = Number(e.target.value)
+    const id =
+      Number(e.target.value)
 
     const engine =
       engines.find(
-        item => item.id === id
+        item =>
+          item.id === id
       ) || null
 
-    setSelectedEngine(engine)
+    setSelectedEngine(
+      engine
+    )
   }
 
   function toggleAddon(
@@ -207,7 +255,8 @@ export default function CustomizeClient() {
     } else {
       setAddons(current =>
         current.filter(
-          item => item !== addonName
+          item =>
+            item !== addonName
         )
       )
     }
@@ -215,81 +264,97 @@ export default function CustomizeClient() {
 
   async function sendQuote() {
     if (!selectedBoat) {
-      alert('Please select a boat.')
+      alert(
+        'Please select a boat.'
+      )
+
       return
     }
 
     if (!selectedEngine) {
-      alert('Please select an engine.')
+      alert(
+        'Please select an engine.'
+      )
+
       return
     }
 
     if (!name.trim()) {
-      alert('Please enter your name.')
+      alert(
+        'Please enter your name.'
+      )
+
       return
     }
 
     if (!phone.trim()) {
-      alert('Please enter your phone number.')
+      alert(
+        'Please enter your phone number.'
+      )
+
       return
     }
 
     setSending(true)
 
-    const trackingId = uuidv4()
+    const trackingId =
+      uuidv4()
 
-    const { error } =
-      await supabase
-        .from('quotes')
-        .insert({
-          boat_name:
-            selectedBoat.name,
+    const {
+      error
+    } = await supabase
+      .from('quotes')
+      .insert({
+        boat_name:
+          selectedBoat.name,
 
-          boat_price:
-            selectedBoat.base_price,
+        boat_price:
+          selectedBoat.base_price,
 
-          engine_name:
-            selectedEngine.name,
+        engine_name:
+          selectedEngine.name,
 
-          engine_price:
-            selectedEngine.price,
+        engine_price:
+          selectedEngine.price,
 
-          extras: addons,
+        extras:
+          addons,
 
-          total_price: total,
+        total_price:
+          total,
 
-          customer_name:
-            name,
+        customer_name:
+          name,
 
-          customer_phone:
-            phone,
+        customer_phone:
+          phone,
 
-          customer_email:
-            email,
+        customer_email:
+          email,
 
-          notes:
-            `Boat color: ${color}. ${
-              notes || ''
-            }`,
+        notes:
+          `Boat color: ${color}. ${
+            notes || ''
+          }`,
 
-          tracking_id:
-            trackingId,
+        tracking_id:
+          trackingId,
 
-          status:
-            'pending',
+        status:
+          'pending',
 
-          payment_status:
-            'unpaid',
+        payment_status:
+          'unpaid',
 
-          payment_method:
-            'bank_transfer',
+        payment_method:
+          'bank_transfer',
 
-          order_status:
-            'quote_sent',
+        order_status:
+          'quote_sent',
 
-          order_stage:
-            'quote_sent'
-        })
+        order_stage:
+          'quote_sent'
+      })
 
     if (error) {
       console.error(error)
@@ -299,6 +364,7 @@ export default function CustomizeClient() {
       )
 
       setSending(false)
+
       return
     }
 
@@ -342,31 +408,38 @@ export default function CustomizeClient() {
 
   async function saveBuild() {
     if (!selectedBoat) {
-      alert('Please select a boat.')
+      alert(
+        'Please select a boat.'
+      )
+
       return
     }
 
     if (!selectedEngine) {
-      alert('Please select an engine.')
+      alert(
+        'Please select an engine.'
+      )
+
       return
     }
 
-    const { error } =
-      await supabase
-        .from('boat_builds')
-        .insert({
-          boat_id:
-            selectedBoat.id,
+    const {
+      error
+    } = await supabase
+      .from('boat_builds')
+      .insert({
+        boat_id:
+          selectedBoat.id,
 
-          engine_id:
-            selectedEngine.id,
+        engine_id:
+          selectedEngine.id,
 
-          addons:
-            addons,
+        addons:
+          addons,
 
-          total_price:
-            total
-        })
+        total_price:
+          total
+      })
 
     if (error) {
       console.error(error)
@@ -386,7 +459,9 @@ export default function CustomizeClient() {
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+
         <div className="text-center">
+
           <div className="text-5xl mb-5">
             🚤
           </div>
@@ -398,7 +473,9 @@ export default function CustomizeClient() {
           <p className="text-gray-500 mt-2">
             Preparing your customization options.
           </p>
+
         </div>
+
       </main>
     )
   }
@@ -413,6 +490,7 @@ export default function CustomizeClient() {
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
           <div>
+
             <p className="text-sm uppercase tracking-[0.25em] text-blue-400 font-semibold">
               DATA MARINE ⚓
             </p>
@@ -424,6 +502,7 @@ export default function CustomizeClient() {
             <p className="text-gray-500 mt-2">
               Configure your boat to your preference.
             </p>
+
           </div>
 
           <Link
@@ -437,16 +516,15 @@ export default function CustomizeClient() {
 
       </header>
 
-
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8">
 
-          {/* LEFT SIDE */}
+          {/* LEFT */}
 
           <div className="space-y-8">
 
-            {/* BOAT PREVIEW */}
+            {/* LIVE PREVIEW */}
 
             <section className="bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden">
 
@@ -474,25 +552,41 @@ export default function CustomizeClient() {
 
                 <div className="relative z-10 text-center px-6">
 
-                  <div
-                    className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
-                    style={{
-                      backgroundColor:
-                        color,
-                      boxShadow:
-                        `0 25px 60px ${color}80`
-                    }}
-                  >
+                  {selectedBoat?.image_url ? (
 
-                    <div className="relative w-full h-full">
+                    <img
+                      src={
+                        selectedBoat.image_url
+                      }
+                      alt={
+                        selectedBoat.name
+                      }
+                      className="mx-auto mb-6 w-full max-w-xl h-56 object-contain drop-shadow-2xl"
+                    />
 
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
+                  ) : (
 
-                      <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
+                    <div
+                      className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
+                      style={{
+                        backgroundColor:
+                          color,
+                        boxShadow:
+                          `0 25px 60px ${color}80`
+                      }}
+                    >
+
+                      <div className="relative w-full h-full">
+
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
+
+                        <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
+
+                      </div>
 
                     </div>
 
-                  </div>
+                  )}
 
                   <p className="text-xs uppercase tracking-widest text-white/60">
                     Selected Boat
@@ -515,8 +609,7 @@ export default function CustomizeClient() {
 
             </section>
 
-
-            {/* BOAT SELECTION */}
+            {/* CHOOSE YOUR BOAT */}
 
             <section>
 
@@ -550,65 +643,119 @@ export default function CustomizeClient() {
 
                 <div className="grid md:grid-cols-2 gap-4">
 
-                  {boats.map(boat => (
+                  {boats.map(
+                    boat => {
 
-                    <button
-                      key={boat.id}
-                      type="button"
-                      onClick={() =>
-                        selectBoat(boat)
-                      }
-                      className={`text-left p-5 rounded-2xl border transition ${
-                        selectedBoat?.id === boat.id
-                          ? 'border-blue-500 bg-blue-950/40 ring-2 ring-blue-500/30'
-                          : 'border-slate-800 bg-slate-900 hover:border-blue-500'
-                      }`}
-                    >
+                      const isSelected =
+                        selectedBoat?.id ===
+                        boat.id
 
-                      <div className="flex items-start justify-between gap-4">
+                      return (
 
-                        <div>
+                        <button
+                          key={boat.id}
+                          type="button"
+                          onClick={() =>
+                            selectBoat(
+                              boat
+                            )
+                          }
+                          className={`text-left overflow-hidden rounded-2xl border transition ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-950/40 ring-2 ring-blue-500/30'
+                              : 'border-slate-800 bg-slate-900 hover:border-blue-500'
+                          }`}
+                        >
 
-                          <h3 className="text-xl font-bold">
-                            {boat.name}
-                          </h3>
+                          {/* BOAT IMAGE */}
 
-                          <p className="text-gray-500 mt-1">
-                            {boat.category}
-                          </p>
+                          {boat.image_url ? (
 
-                        </div>
+                            <div className="w-full h-52 bg-white flex items-center justify-center overflow-hidden">
 
-                        {selectedBoat?.id === boat.id && (
+                              <img
+                                src={
+                                  boat.image_url
+                                }
+                                alt={
+                                  boat.name
+                                }
+                                className="w-full h-full object-contain"
+                              />
 
-                          <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full">
-                            Selected
-                          </span>
+                            </div>
 
-                        )}
+                          ) : (
 
-                      </div>
+                            <div className="w-full h-52 bg-slate-950 flex items-center justify-center">
 
-                      <p className="text-gray-400 text-sm mt-4">
-                        Capacity: {boat.capacity}
-                      </p>
+                              <div className="text-center">
 
-                      <p className="text-blue-400 font-bold text-lg mt-4">
-                        ₦{Number(
-                          boat.base_price
-                        ).toLocaleString()}
-                      </p>
+                                <div className="text-5xl">
+                                  🚤
+                                </div>
 
-                    </button>
+                                <p className="text-gray-600 text-sm mt-2">
+                                  No boat image
+                                </p>
 
-                  ))}
+                              </div>
+
+                            </div>
+
+                          )}
+
+                          {/* CARD DETAILS */}
+
+                          <div className="p-5">
+
+                            <div className="flex items-start justify-between gap-4">
+
+                              <div>
+
+                                <h3 className="text-xl font-bold">
+                                  {boat.name}
+                                </h3>
+
+                                <p className="text-gray-500 mt-1">
+                                  {boat.category}
+                                </p>
+
+                              </div>
+
+                              {isSelected && (
+
+                                <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                                  Selected
+                                </span>
+
+                              )}
+
+                            </div>
+
+                            <p className="text-gray-400 text-sm mt-4">
+                              Capacity: {boat.capacity}
+                            </p>
+
+                            <p className="text-blue-400 font-bold text-lg mt-4">
+                              ₦{Number(
+                                boat.base_price
+                              ).toLocaleString()}
+                            </p>
+
+                          </div>
+
+                        </button>
+
+                      )
+                    }
+                  )}
 
                 </div>
 
               )}
 
             </section>
-
 
             {/* COLOR */}
 
@@ -632,41 +779,45 @@ export default function CustomizeClient() {
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
 
-                {colors.map(item => (
+                {colors.map(
+                  item => (
 
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() =>
-                      setColor(item.value)
-                    }
-                    className={`p-4 rounded-2xl border transition ${
-                      color === item.value
-                        ? 'border-blue-500 ring-2 ring-blue-500/30'
-                        : 'border-slate-800'
-                    }`}
-                  >
-
-                    <div
-                      className="w-full h-12 rounded-xl border border-white/10"
-                      style={{
-                        backgroundColor:
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() =>
+                        setColor(
                           item.value
-                      }}
-                    />
+                        )
+                      }
+                      className={`p-4 rounded-2xl border transition ${
+                        color ===
+                        item.value
+                          ? 'border-blue-500 ring-2 ring-blue-500/30'
+                          : 'border-slate-800'
+                      }`}
+                    >
 
-                    <p className="text-sm font-semibold mt-3">
-                      {item.name}
-                    </p>
+                      <div
+                        className="w-full h-12 rounded-xl border border-white/10"
+                        style={{
+                          backgroundColor:
+                            item.value
+                        }}
+                      />
 
-                  </button>
+                      <p className="text-sm font-semibold mt-3">
+                        {item.name}
+                      </p>
 
-                ))}
+                    </button>
+
+                  )
+                )}
 
               </div>
 
             </section>
-
 
             {/* ENGINE */}
 
@@ -687,7 +838,8 @@ export default function CustomizeClient() {
               <select
                 className="w-full bg-slate-900 border border-slate-700 text-white rounded-2xl p-4 focus:border-blue-500 outline-none"
                 value={
-                  selectedEngine?.id || ''
+                  selectedEngine?.id ||
+                  ''
                 }
                 onChange={
                   selectEngine
@@ -698,28 +850,29 @@ export default function CustomizeClient() {
                   Select an engine
                 </option>
 
-                {engines.map(engine => (
+                {engines.map(
+                  engine => (
 
-                  <option
-                    key={engine.id}
-                    value={engine.id}
-                  >
-                    {engine.name}
-                    {engine.horsepower
-                      ? ` - ${engine.horsepower}`
-                      : ''}
-                    {' - ₦'}
-                    {Number(
-                      engine.price
-                    ).toLocaleString()}
-                  </option>
+                    <option
+                      key={engine.id}
+                      value={engine.id}
+                    >
+                      {engine.name}
+                      {engine.horsepower
+                        ? ` - ${engine.horsepower}`
+                        : ''}
+                      {' - ₦'}
+                      {Number(
+                        engine.price
+                      ).toLocaleString()}
+                    </option>
 
-                ))}
+                  )
+                )}
 
               </select>
 
             </section>
-
 
             {/* ADDONS */}
 
@@ -792,7 +945,6 @@ export default function CustomizeClient() {
 
             </section>
 
-
             {/* CUSTOMER */}
 
             <section>
@@ -820,7 +972,9 @@ export default function CustomizeClient() {
                   placeholder="Full Name"
                   value={name}
                   onChange={e =>
-                    setName(e.target.value)
+                    setName(
+                      e.target.value
+                    )
                   }
                   className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
                 />
@@ -830,7 +984,9 @@ export default function CustomizeClient() {
                   placeholder="Phone / WhatsApp Number"
                   value={phone}
                   onChange={e =>
-                    setPhone(e.target.value)
+                    setPhone(
+                      e.target.value
+                    )
                   }
                   className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
                 />
@@ -840,7 +996,9 @@ export default function CustomizeClient() {
                   placeholder="Email Address"
                   value={email}
                   onChange={e =>
-                    setEmail(e.target.value)
+                    setEmail(
+                      e.target.value
+                    )
                   }
                   className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500"
                 />
@@ -849,7 +1007,9 @@ export default function CustomizeClient() {
                   placeholder="Additional requirements or comments"
                   value={notes}
                   onChange={e =>
-                    setNotes(e.target.value)
+                    setNotes(
+                      e.target.value
+                    )
                   }
                   rows={5}
                   className="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-white outline-none focus:border-blue-500 resize-none"
@@ -860,7 +1020,6 @@ export default function CustomizeClient() {
             </section>
 
           </div>
-
 
           {/* RIGHT SIDE */}
 
@@ -880,8 +1039,25 @@ export default function CustomizeClient() {
 
               </div>
 
-
               <div className="p-6 space-y-5">
+
+                {selectedBoat?.image_url && (
+
+                  <div className="bg-white rounded-2xl overflow-hidden">
+
+                    <img
+                      src={
+                        selectedBoat.image_url
+                      }
+                      alt={
+                        selectedBoat.name
+                      }
+                      className="w-full h-40 object-contain"
+                    />
+
+                  </div>
+
+                )}
 
                 <div className="flex justify-between gap-5">
 
@@ -895,7 +1071,6 @@ export default function CustomizeClient() {
                   </span>
 
                 </div>
-
 
                 <div className="flex justify-between gap-5">
 
@@ -926,7 +1101,6 @@ export default function CustomizeClient() {
 
                 </div>
 
-
                 <div className="flex justify-between gap-5">
 
                   <span className="text-gray-500">
@@ -939,7 +1113,6 @@ export default function CustomizeClient() {
                   </span>
 
                 </div>
-
 
                 <div className="border-t border-slate-800 pt-5">
 
@@ -959,10 +1132,12 @@ export default function CustomizeClient() {
 
                       {addons.map(
                         addon => (
+
                           <div
                             key={addon}
                             className="flex justify-between gap-3 text-sm"
                           >
+
                             <span>
                               {addon}
                             </span>
@@ -973,10 +1148,13 @@ export default function CustomizeClient() {
                                   item =>
                                     item.name ===
                                     addon
-                                )?.price || 0
+                                )?.price ||
+                                  0
                               ).toLocaleString()}
                             </span>
+
                           </div>
+
                         )
                       )}
 
@@ -985,7 +1163,6 @@ export default function CustomizeClient() {
                   )}
 
                 </div>
-
 
                 <div className="border-t border-slate-800 pt-5 space-y-3">
 
@@ -1027,7 +1204,6 @@ export default function CustomizeClient() {
 
                 </div>
 
-
                 <div className="bg-blue-950 border border-blue-800 rounded-2xl p-5">
 
                   <p className="text-blue-300 text-sm">
@@ -1044,11 +1220,14 @@ export default function CustomizeClient() {
 
                 </div>
 
-
                 <button
                   type="button"
-                  onClick={sendQuote}
-                  disabled={sending}
+                  onClick={
+                    sendQuote
+                  }
+                  disabled={
+                    sending
+                  }
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl font-bold transition"
                 >
                   {sending
@@ -1056,10 +1235,11 @@ export default function CustomizeClient() {
                     : 'Request Quote'}
                 </button>
 
-
                 <button
                   type="button"
-                  onClick={saveBuild}
+                  onClick={
+                    saveBuild
+                  }
                   className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 py-4 rounded-2xl font-bold transition"
                 >
                   Save My Configuration
