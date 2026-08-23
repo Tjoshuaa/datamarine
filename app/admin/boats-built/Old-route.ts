@@ -3,3 +3,4 @@ export async function GET() {
     status: 404,
   })
 }
+https://github.com/
