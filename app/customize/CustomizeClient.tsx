@@ -30,12 +30,30 @@ type Addon = {
 }
 
 const addonOptions: Addon[] = [
-  { name: 'GPS System', price: 1700000 },
-  { name: 'Marine Radio', price: 650000 },
-  { name: 'Display / Fish Finder', price: 850000 },
-  { name: 'LED Lights', price: 150000 },
-  { name: 'Fishing Kit', price: 300000 },
-  { name: 'Luxury Seats', price: 250000 }
+  {
+    name: 'GPS System',
+    price: 1700000
+  },
+  {
+    name: 'Marine Radio',
+    price: 650000
+  },
+  {
+    name: 'Display / Fish Finder',
+    price: 850000
+  },
+  {
+    name: 'LED Lights',
+    price: 150000
+  },
+  {
+    name: 'Fishing Kit',
+    price: 300000
+  },
+  {
+    name: 'Luxury Seats',
+    price: 250000
+  }
 ]
 
 const colors = [
@@ -95,6 +113,9 @@ export default function CustomizeClient() {
   const [sending, setSending] =
     useState(false)
 
+  const [savingBuild, setSavingBuild] =
+    useState(false)
+
   const searchParams =
     useSearchParams()
 
@@ -115,7 +136,7 @@ export default function CustomizeClient() {
       supabase
         .from('boats')
         .select(
-          'id, name, category, capacity, base_price, image_url'
+          'id,name,category,capacity,base_price,image_url'
         )
         .order('id', {
           ascending: true
@@ -178,13 +199,45 @@ export default function CustomizeClient() {
 
       if (!data) return
 
+      if (data.boat_id) {
+        const boat =
+          boats.find(
+            item =>
+              item.id === data.boat_id
+          )
+
+        if (boat) {
+          setSelectedBoat(boat)
+        }
+      }
+
+      if (data.engine_id) {
+        const engine =
+          engines.find(
+            item =>
+              item.id === data.engine_id
+          )
+
+        if (engine) {
+          setSelectedEngine(engine)
+        }
+      }
+
       setAddons(
-        data.addons || []
+        Array.isArray(data.addons)
+          ? data.addons
+          : []
       )
     }
 
-    loadBuild()
-  }, [buildId])
+    if (boats.length > 0 || engines.length > 0) {
+      loadBuild()
+    }
+  }, [
+    buildId,
+    boats,
+    engines
+  ])
 
   const boatPrice =
     Number(
@@ -198,11 +251,15 @@ export default function CustomizeClient() {
 
   const addonPrice =
     addons.reduce(
-      (total, addonName) => {
+      (
+        total,
+        addonName
+      ) => {
         const addon =
           addonOptions.find(
             item =>
-              item.name === addonName
+              item.name ===
+              addonName
           )
 
         return (
@@ -248,10 +305,20 @@ export default function CustomizeClient() {
     checked: boolean
   ) {
     if (checked) {
-      setAddons(current => [
-        ...current,
-        addonName
-      ])
+      setAddons(current => {
+        if (
+          current.includes(
+            addonName
+          )
+        ) {
+          return current
+        }
+
+        return [
+          ...current,
+          addonName
+        ]
+      })
     } else {
       setAddons(current =>
         current.filter(
@@ -267,7 +334,6 @@ export default function CustomizeClient() {
       alert(
         'Please select a boat.'
       )
-
       return
     }
 
@@ -275,7 +341,6 @@ export default function CustomizeClient() {
       alert(
         'Please select an engine.'
       )
-
       return
     }
 
@@ -283,7 +348,6 @@ export default function CustomizeClient() {
       alert(
         'Please enter your name.'
       )
-
       return
     }
 
@@ -291,119 +355,148 @@ export default function CustomizeClient() {
       alert(
         'Please enter your phone number.'
       )
-
       return
     }
 
     setSending(true)
 
-    const trackingId =
-      uuidv4()
+    try {
+      const trackingId =
+        uuidv4()
 
-    const {
-      error
-    } = await supabase
-      .from('quotes')
-      .insert({
-        boat_name:
-          selectedBoat.name,
+      const {
+        error
+      } = await supabase
+        .from('quotes')
+        .insert({
+          boat_name:
+            selectedBoat.name,
 
-        boat_price:
-          selectedBoat.base_price,
+          boat_price:
+            selectedBoat.base_price,
 
-        engine_name:
-          selectedEngine.name,
+          engine_name:
+            selectedEngine.name,
 
-        engine_price:
-          selectedEngine.price,
+          engine_price:
+            selectedEngine.price,
 
-        extras:
-          addons,
+          extras:
+            addons,
 
-        total_price:
-          total,
+          total_price:
+            total,
 
-        customer_name:
-          name,
+          customer_name:
+            name.trim(),
 
-        customer_phone:
-          phone,
+          customer_phone:
+            phone.trim(),
 
-        customer_email:
-          email,
+          customer_email:
+            email.trim(),
 
-        notes:
-          `Boat color: ${color}. ${
-            notes || ''
-          }`,
+          notes:
+            `Boat color: ${
+              colors.find(
+                item =>
+                  item.value ===
+                  color
+              )?.name ||
+              color
+            }. ${
+              notes.trim()
+                ? notes.trim()
+                : ''
+            }`,
 
-        tracking_id:
-          trackingId,
+          tracking_id:
+            trackingId,
 
-        status:
-          'pending',
+          status:
+            'pending',
 
-        payment_status:
-          'unpaid',
+          payment_status:
+            'unpaid',
 
-        payment_method:
-          'bank_transfer',
+          payment_method:
+            'bank_transfer',
 
-        order_status:
-          'quote_sent',
+          order_status:
+            'quote_sent',
 
-        order_stage:
-          'quote_sent'
-      })
+          order_stage:
+            'quote_sent'
+        })
 
-    if (error) {
-      console.error(error)
+      if (error) {
+        throw error
+      }
+
+      const trackingLink =
+        `${window.location.origin}/track/${trackingId}`
+
+      const message =
+        `Hello DATA MARINE,%0A%0A` +
+        `I have configured a boat and would like a quote.%0A%0A` +
+        `Boat: ${encodeURIComponent(
+          selectedBoat.name
+        )}%0A` +
+        `Color: ${encodeURIComponent(
+          colors.find(
+            item =>
+              item.value ===
+              color
+          )?.name ||
+            color
+        )}%0A` +
+        `Engine: ${encodeURIComponent(
+          selectedEngine.name
+        )}%0A` +
+        `Estimated Total: ₦${total.toLocaleString()}%0A%0A` +
+        `Customer: ${encodeURIComponent(
+          name
+        )}%0A` +
+        `Phone: ${encodeURIComponent(
+          phone
+        )}%0A` +
+        `Tracking: ${encodeURIComponent(
+          trackingLink
+        )}`
 
       alert(
-        'There was a problem sending your quote. Please try again.'
+        'Your boat quote has been sent successfully!'
       )
 
+      window.open(
+        `https://wa.me/${phone.replace(
+          /\D/g,
+          ''
+        )}?text=${message}`,
+        '_blank'
+      )
+
+      setName('')
+      setPhone('')
+      setEmail('')
+      setNotes('')
+      setSelectedBoat(null)
+      setSelectedEngine(null)
+      setAddons([])
+      setColor('#1e3a8a')
+    } catch (error: any) {
+      console.error(
+        'Quote error:',
+        error
+      )
+
+      alert(
+        error?.message ||
+          'There was a problem sending your quote. Please try again.'
+      )
+    } finally {
       setSending(false)
-
-      return
     }
-
-    const trackingLink =
-      `${window.location.origin}/track/${trackingId}`
-
-    alert(
-      'Your boat quote has been sent successfully!'
-    )
-
-    const message =
-      `Hello DATA MARINE,%0A%0A` +
-      `I have configured a boat and would like a quote.%0A%0A` +
-      `Boat: ${selectedBoat.name}%0A` +
-      `Color: ${color}%0A` +
-      `Engine: ${selectedEngine.name}%0A` +
-      `Estimated Total: ₦${total.toLocaleString()}%0A%0A` +
-      `Customer: ${name}%0A` +
-      `Phone: ${phone}%0A` +
-      `Tracking: ${trackingLink}`
-
-    window.open(
-      `https://wa.me/${phone.replace(
-        /\D/g,
-        ''
-      )}?text=${message}`,
-      '_blank'
-    )
-
-    setName('')
-    setPhone('')
-    setEmail('')
-    setNotes('')
-    setSelectedBoat(null)
-    setSelectedEngine(null)
-    setAddons([])
-    setColor('#1e3a8a')
-
-    setSending(false)
   }
 
   async function saveBuild() {
@@ -411,7 +504,6 @@ export default function CustomizeClient() {
       alert(
         'Please select a boat.'
       )
-
       return
     }
 
@@ -419,156 +511,50 @@ export default function CustomizeClient() {
       alert(
         'Please select an engine.'
       )
-
       return
     }
 
-    const {
-      error
-    } = await supabase
-      .from('boat_builds')
-      .insert({
-        boat_id:
-          selectedBoat.id,
+    setSavingBuild(true)
 
-        engine_id:
-          selectedEngine.id,
+    try {
+      const {
+        error
+      } = await supabase
+        .from('boat_builds')
+        .insert({
+          boat_id:
+            selectedBoat.id,
 
-        addons:
-          addons,
+          engine_id:
+            selectedEngine.id,
 
-        total_price:
-          total
-      })
+          addons:
+            addons,
 
-    if (error) {
-      console.error(error)
+          total_price:
+            total
+        })
+
+      if (error) {
+        throw error
+      }
 
       alert(
-        'Failed to save your build.'
+        'Your boat configuration has been saved.'
+      )
+    } catch (error: any) {
+      console.error(
+        'Save build error:',
+        error
       )
 
-      return
-    }
-
-    alert(
-      'Your boat configuration has been saved.'
-    )
-  }
-
-  /*
-   * -------------------------------------------------------
-   * BOAT COLOR PREVIEW
-   * -------------------------------------------------------
-   *
-   * Your current boat photos are real-world photographs.
-   * Therefore we don't recolor the entire image.
-   *
-   * Instead:
-   *
-   * 1. Keep the original photograph visible.
-   * 2. Put a color layer over the lower boat/hull region.
-   * 3. Use mix-blend-mode:multiply so the original
-   *    shadows/details remain visible.
-   *
-   * This gives a much more realistic preview than changing
-   * the entire background color.
-   *
-   * Once we create transparent boat cutouts, this same
-   * interface can be upgraded to pixel-perfect recoloring.
-   */
-
-  function BoatPreview() {
-    if (!selectedBoat?.image_url) {
-      return (
-        <div
-          className="mx-auto mb-6 w-64 h-32 rounded-[50%]"
-          style={{
-            backgroundColor:
-              color,
-            boxShadow:
-              `0 25px 60px ${color}80`
-          }}
-        >
-          <div className="relative w-full h-full">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
-
-            <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
-          </div>
-        </div>
+      alert(
+        error?.message ||
+          'Failed to save your build.'
       )
+    } finally {
+      setSavingBuild(false)
     }
-
-    return (
-      <div className="relative mx-auto mb-6 w-full max-w-xl h-64 overflow-hidden rounded-2xl">
-
-        {/* Original photograph */}
-
-        <img
-          src={selectedBoat.image_url}
-          alt={selectedBoat.name}
-          className="absolute inset-0 w-full h-full object-contain"
-        />
-
-        {/*
-         * Color overlay.
-         *
-         * The clip-path deliberately concentrates the
-         * recoloring toward the lower/middle boat area
-         * instead of the whole photograph.
-         */}
-
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundColor: color,
-
-            mixBlendMode:
-              color === '#f8fafc'
-                ? 'screen'
-                : 'multiply',
-
-            opacity:
-              color === '#f8fafc'
-                ? 0.42
-                : 0.58,
-
-            clipPath:
-              'polygon(8% 38%, 92% 38%, 100% 82%, 86% 96%, 14% 96%, 0% 82%)'
-          }}
-        />
-
-        {/*
-         * Soft highlight layer.
-         * Helps the colored hull retain some of the
-         * original photograph's lighting.
-         */}
-
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              `linear-gradient(
-                180deg,
-                transparent 35%,
-                ${color}25 55%,
-                ${color}55 82%,
-                transparent 100%
-              )`,
-
-            mixBlendMode:
-              'color',
-
-            opacity:
-              0.55,
-
-            clipPath:
-              'polygon(5% 35%, 95% 35%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)'
-          }}
-        />
-
-      </div>
-    )
   }
 
   if (loading) {
@@ -594,6 +580,12 @@ export default function CustomizeClient() {
       </main>
     )
   }
+
+  const selectedColorName =
+    colors.find(
+      item =>
+        item.value === color
+    )?.name || 'Custom'
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -656,26 +648,75 @@ export default function CustomizeClient() {
               </div>
 
               <div
-                className="relative min-h-[360px] flex items-center justify-center overflow-hidden bg-slate-950"
+                className="relative min-h-[360px] flex items-center justify-center overflow-hidden transition-all duration-500"
+                style={{
+                  background:
+                    `linear-gradient(135deg, ${color} 0%, #020617 100%)`
+                }}
               >
 
-                {/* Ambient lighting */}
+                {/* Soft professional color atmosphere */}
 
                 <div
-                  className="absolute inset-0 pointer-events-none transition-all duration-500"
+                  className="absolute inset-0 transition-all duration-500"
                   style={{
                     background:
-                      `radial-gradient(
-                        circle at center,
-                        ${color}25 0%,
-                        transparent 65%
-                      )`
+                      `radial-gradient(circle at 50% 45%, ${color}45 0%, transparent 55%)`
                   }}
                 />
 
-                <div className="relative z-10 text-center px-6 w-full">
+                <div className="absolute inset-0 bg-black/20" />
 
-                  <BoatPreview />
+                <div className="relative z-10 w-full text-center px-6">
+
+                  {selectedBoat?.image_url ? (
+
+                    <div className="relative mx-auto w-full max-w-2xl">
+
+                      <div
+                        className="absolute inset-8 rounded-full blur-3xl opacity-40 transition-all duration-500"
+                        style={{
+                          backgroundColor:
+                            color
+                        }}
+                      />
+
+                      <img
+                        src={
+                          selectedBoat.image_url
+                        }
+                        alt={
+                          selectedBoat.name
+                        }
+                        className="relative mx-auto w-full h-64 md:h-72 object-contain drop-shadow-2xl transition-transform duration-500"
+                      />
+
+                    </div>
+
+                  ) : (
+
+                    <div
+                      className="mx-auto mb-6 w-64 h-32 rounded-[50%] transition-all duration-500"
+                      style={{
+                        backgroundColor:
+                          color,
+
+                        boxShadow:
+                          `0 25px 60px ${color}80`
+                      }}
+                    >
+
+                      <div className="relative w-full h-full">
+
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-12 bg-white/90 rounded-[50%]" />
+
+                        <div className="absolute left-1/2 top-[30%] -translate-x-1/2 w-20 h-8 bg-slate-900 rounded-t-lg" />
+
+                      </div>
+
+                    </div>
+
+                  )}
 
                   <p className="text-xs uppercase tracking-widest text-white/60">
                     Selected Boat
@@ -686,9 +727,12 @@ export default function CustomizeClient() {
                       'Select a Boat'}
                   </h2>
 
-                  {selectedEngine && (
+                  {selectedBoat && (
                     <p className="text-white/70 mt-2">
-                      {selectedEngine.name}
+                      {selectedColorName}
+                      {selectedEngine
+                        ? ` • ${selectedEngine.name}`
+                        : ''}
                     </p>
                   )}
 
@@ -857,7 +901,7 @@ export default function CustomizeClient() {
                 </h2>
 
                 <p className="text-gray-500 mt-1">
-                  Change the boat color in the live preview.
+                  Preview your preferred finish.
                 </p>
 
               </div>
@@ -878,8 +922,8 @@ export default function CustomizeClient() {
                       className={`p-4 rounded-2xl border transition ${
                         color ===
                         item.value
-                          ? 'border-blue-500 ring-2 ring-blue-500/30'
-                          : 'border-slate-800'
+                          ? 'border-blue-500 ring-2 ring-blue-500/30 bg-blue-950/20'
+                          : 'border-slate-800 bg-slate-950 hover:border-slate-600'
                       }`}
                     >
 
@@ -1106,7 +1150,7 @@ export default function CustomizeClient() {
 
           </div>
 
-          {/* RIGHT SIDE */}
+          {/* RIGHT */}
 
           <aside className="lg:sticky lg:top-6 h-fit">
 
@@ -1128,7 +1172,15 @@ export default function CustomizeClient() {
 
                 {selectedBoat?.image_url && (
 
-                  <div className="relative bg-white rounded-2xl overflow-hidden h-40">
+                  <div className="relative bg-white rounded-2xl overflow-hidden p-2">
+
+                    <div
+                      className="absolute inset-0 opacity-20 transition-colors duration-500"
+                      style={{
+                        backgroundColor:
+                          color
+                      }}
+                    />
 
                     <img
                       src={
@@ -1137,28 +1189,7 @@ export default function CustomizeClient() {
                       alt={
                         selectedBoat.name
                       }
-                      className="absolute inset-0 w-full h-full object-contain"
-                    />
-
-                    <div
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        backgroundColor:
-                          color,
-
-                        mixBlendMode:
-                          color === '#f8fafc'
-                            ? 'screen'
-                            : 'multiply',
-
-                        opacity:
-                          color === '#f8fafc'
-                            ? 0.35
-                            : 0.5,
-
-                        clipPath:
-                          'polygon(5% 35%, 95% 35%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)'
-                      }}
+                      className="relative w-full h-40 object-contain"
                     />
 
                   </div>
@@ -1195,12 +1226,7 @@ export default function CustomizeClient() {
                     />
 
                     <span>
-                      {colors.find(
-                        item =>
-                          item.value ===
-                          color
-                      )?.name ||
-                        'Custom'}
+                      {selectedColorName}
                     </span>
 
                   </div>
@@ -1346,9 +1372,14 @@ export default function CustomizeClient() {
                   onClick={
                     saveBuild
                   }
-                  className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 py-4 rounded-2xl font-bold transition"
+                  disabled={
+                    savingBuild
+                  }
+                  className="w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 disabled:opacity-50 py-4 rounded-2xl font-bold transition"
                 >
-                  Save My Configuration
+                  {savingBuild
+                    ? 'Saving...'
+                    : 'Save My Configuration'}
                 </button>
 
               </div>
