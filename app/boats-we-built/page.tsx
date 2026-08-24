@@ -1,18 +1,20 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type BoatBuilt = {
   id: number
-  image_url: string
+  image_url: string | null
   name: string | null
   type: string | null
   description: string | null
-  featured: boolean
+  featured: boolean | null
   created_at: string
 }
 
-export default function BoatsBuiltPage() {
+export default function BoatsWeBuiltPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -25,11 +27,15 @@ export default function BoatsBuiltPage() {
 
     const { data, error } = await supabase
       .from('boats_built')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .select(
+        'id,image_url,name,type,description,featured,created_at'
+      )
+      .order('created_at', {
+        ascending: false,
+      })
 
     if (error) {
-      console.error(error)
+      console.error('Failed to load boats:', error)
       setBoats([])
     } else {
       setBoats(data || [])
@@ -38,8 +44,13 @@ export default function BoatsBuiltPage() {
     setLoading(false)
   }
 
-  const featuredBoats = boats.filter((boat) => boat.featured)
-  const regularBoats = boats.filter((boat) => !boat.featured)
+  const featuredBoats = boats.filter(
+    (boat) => boat.featured === true
+  )
+
+  const regularBoats = boats.filter(
+    (boat) => boat.featured !== true
+  )
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -99,32 +110,31 @@ export default function BoatsBuiltPage() {
 
       </section>
 
-
       {/* INTRO */}
 
       <section className="max-w-7xl mx-auto px-6 py-20">
 
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
 
           <p className="text-blue-400 uppercase tracking-[0.25em] text-sm font-bold">
             Our Work
           </p>
 
-          <h2 className="text-3xl md:text-5xl font-bold mt-3">
+          <h2 className="text-3xl md:text-5xl font-bold mt-3 leading-tight">
             Built for the water. Built for the mission.
-Explore the DATA MARINE difference.
+            Explore the DATA MARINE difference.
           </h2>
 
-          <p className="text-gray-400 text-lg mt-5 leading-relaxed">
-            Every DATA MARINE boat is designed around the needs of its
-            owner, whether for commercial transportation, fishing,
-            security, recreation or professional marine operations.
+          <p className="text-gray-400 text-lg mt-6 leading-relaxed">
+            Every DATA MARINE boat is designed around the needs of
+            its owner, whether for commercial transportation,
+            fishing, security, recreation or professional marine
+            operations.
           </p>
 
         </div>
 
       </section>
-
 
       {/* LOADING */}
 
@@ -145,7 +155,6 @@ Explore the DATA MARINE difference.
 
         </section>
       )}
-
 
       {/* EMPTY */}
 
@@ -172,34 +181,26 @@ Explore the DATA MARINE difference.
         </section>
       )}
 
-
-      {/* FEATURED PROJECTS */}
+      {/* FEATURED BUILDS */}
 
       {!loading && featuredBoats.length > 0 && (
-
         <section className="max-w-7xl mx-auto px-6 pb-24">
 
-          <div className="flex items-end justify-between mb-8">
+          <div className="mb-8">
 
-            <div>
+            <p className="text-blue-400 uppercase tracking-[0.25em] text-sm font-bold">
+              Featured Builds
+            </p>
 
-              <p className="text-blue-400 uppercase tracking-[0.25em] text-sm font-bold">
-                Featured Builds
-              </p>
-
-              <h2 className="text-3xl md:text-4xl font-bold mt-2">
-                Featured Projects
-              </h2>
-
-            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mt-2">
+              Featured Projects
+            </h2>
 
           </div>
-
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             {featuredBoats.map((boat) => (
-
               <article
                 key={boat.id}
                 className="group bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden hover:border-blue-500/50 transition"
@@ -207,14 +208,20 @@ Explore the DATA MARINE difference.
 
                 <div className="relative aspect-[16/10] overflow-hidden bg-black">
 
-                  <img
-                    src={boat.image_url}
-                    alt={
-                      boat.name ||
-                      'Boat built by DATA MARINE'
-                    }
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                  />
+                  {boat.image_url ? (
+                    <img
+                      src={boat.image_url}
+                      alt={
+                        boat.name ||
+                        'Boat built by DATA MARINE'
+                      }
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-600">
+                      No image available
+                    </div>
+                  )}
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
@@ -249,7 +256,6 @@ Explore the DATA MARINE difference.
                 </div>
 
               </article>
-
             ))}
 
           </div>
@@ -257,11 +263,9 @@ Explore the DATA MARINE difference.
         </section>
       )}
 
-
       {/* ALL BUILDS */}
 
       {!loading && regularBoats.length > 0 && (
-
         <section className="max-w-7xl mx-auto px-6 pb-24">
 
           <div className="mb-8">
@@ -276,11 +280,9 @@ Explore the DATA MARINE difference.
 
           </div>
 
-
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7">
 
             {regularBoats.map((boat) => (
-
               <article
                 key={boat.id}
                 className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500/50 transition"
@@ -288,14 +290,20 @@ Explore the DATA MARINE difference.
 
                 <div className="relative aspect-[4/3] overflow-hidden bg-black">
 
-                  <img
-                    src={boat.image_url}
-                    alt={
-                      boat.name ||
-                      'Boat built by DATA MARINE'
-                    }
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
+                  {boat.image_url ? (
+                    <img
+                      src={boat.image_url}
+                      alt={
+                        boat.name ||
+                        'Boat built by DATA MARINE'
+                      }
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-600">
+                      No image available
+                    </div>
+                  )}
 
                 </div>
 
@@ -306,7 +314,8 @@ Explore the DATA MARINE difference.
                   </p>
 
                   <h3 className="text-xl font-bold mt-2">
-                    {boat.name || 'Boat Built by DATA MARINE'}
+                    {boat.name ||
+                      'Boat Built by DATA MARINE'}
                   </h3>
 
                   {boat.type && (
@@ -316,7 +325,7 @@ Explore the DATA MARINE difference.
                   )}
 
                   {boat.description && (
-                    <p className="text-gray-500 text-sm mt-4 leading-relaxed line-clamp-3">
+                    <p className="text-gray-500 text-sm mt-4 leading-relaxed">
                       {boat.description}
                     </p>
                   )}
@@ -324,14 +333,12 @@ Explore the DATA MARINE difference.
                 </div>
 
               </article>
-
             ))}
 
           </div>
 
         </section>
       )}
-
 
       {/* CTA */}
 
