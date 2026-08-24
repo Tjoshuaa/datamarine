@@ -78,7 +78,7 @@ export default function BoatsWeBuiltPage() {
             </p>
 
             <h1 className="text-5xl md:text-7xl font-bold leading-tight mt-5">
-              Boats We've Built
+              Boats We've Built ⚓
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mt-6 leading-relaxed">
