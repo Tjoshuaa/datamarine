@@ -11,14 +11,16 @@ type BoatBuilt = {
   description: string | null
   featured: boolean | null
   created_at: string
+  boat_id?: number | null
+  engine_id?: number | null
+  addons?: any
+  total_price?: number
 }
 
 export default function BoatsBuiltAdminPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [savingEdit, setSavingEdit] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -33,6 +35,9 @@ export default function BoatsBuiltAdminPage() {
   const [editDescription, setEditDescription] = useState('')
   const [editFeatured, setEditFeatured] = useState(false)
 
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
   useEffect(() => {
     loadBoats()
   }, [])
@@ -44,17 +49,29 @@ export default function BoatsBuiltAdminPage() {
     try {
       const { data, error } = await supabase
         .from('boats_built')
-        .select(
-          'id,image_url,name,type,description,featured,created_at'
-        )
-        .order('created_at', { ascending: false })
+        .select(`
+          id,
+          image_url,
+          name,
+          type,
+          description,
+          featured,
+          created_at,
+          boat_id,
+          engine_id,
+          addons,
+          total_price
+        `)
+        .order('created_at', {
+          ascending: false,
+        })
 
       if (error) {
         console.error('Load boats error:', error)
         throw error
       }
 
-      setBoats(data || [])
+      setBoats((data || []) as BoatBuilt[])
     } catch (err: any) {
       console.error(err)
 
@@ -76,12 +93,9 @@ export default function BoatsBuiltAdminPage() {
 
     if (!file) return
 
-    if (preview) {
-      URL.revokeObjectURL(preview)
-    }
-
     setSelectedFile(file)
     setPreview(URL.createObjectURL(file))
+
     setMessage('')
     setError('')
   }
@@ -137,7 +151,10 @@ export default function BoatsBuiltAdminPage() {
 
       await loadBoats()
     } catch (err: any) {
-      console.error('Upload boat error:', err)
+      console.error(
+        'Upload boat error:',
+        err
+      )
 
       setError(
         err?.message ||
@@ -150,10 +167,22 @@ export default function BoatsBuiltAdminPage() {
 
   function startEditing(boat: BoatBuilt) {
     setEditingId(boat.id)
-    setEditName(boat.name || '')
-    setEditType(boat.type || '')
-    setEditDescription(boat.description || '')
-    setEditFeatured(Boolean(boat.featured))
+
+    setEditName(
+      boat.name || ''
+    )
+
+    setEditType(
+      boat.type || ''
+    )
+
+    setEditDescription(
+      boat.description || ''
+    )
+
+    setEditFeatured(
+      Boolean(boat.featured)
+    )
 
     setMessage('')
     setError('')
@@ -161,19 +190,23 @@ export default function BoatsBuiltAdminPage() {
 
   function cancelEditing() {
     setEditingId(null)
+
     setEditName('')
     setEditType('')
     setEditDescription('')
     setEditFeatured(false)
+
+    setSavingEdit(false)
   }
 
   /*
    * SAVE EDIT
    *
    * Important:
-   * We DO NOT use .single().
-   * We update the row, check how many rows
-   * Supabase returned, then reload the database.
+   * We do NOT use .select().single() here.
+   *
+   * First we update the row.
+   * Then we fetch that exact row separately.
    */
 
   async function saveEdit(id: number) {
@@ -182,7 +215,8 @@ export default function BoatsBuiltAdminPage() {
 
     const cleanName = editName.trim()
     const cleanType = editType.trim()
-    const cleanDescription = editDescription.trim()
+    const cleanDescription =
+      editDescription.trim()
 
     if (!cleanName) {
       setError('Please enter a boat name.')
@@ -197,120 +231,135 @@ export default function BoatsBuiltAdminPage() {
     setSavingEdit(true)
 
     try {
-      console.log('Updating boats_built row:', id)
+      console.log(
+        'Attempting to update boats_built ID:',
+        id
+      )
 
-      const updatePayload = {
-        name: cleanName,
-        type: cleanType,
-        description: cleanDescription || null,
-        featured: editFeatured,
+      /*
+       * STEP 1
+       * Verify the row exists.
+       */
+
+      const {
+        data: existingBoat,
+        error: findError,
+      } = await supabase
+        .from('boats_built')
+        .select('id,name,type')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (findError) {
+        console.error(
+          'Find boat error:',
+          findError
+        )
+
+        throw findError
+      }
+
+      if (!existingBoat) {
+        throw new Error(
+          `Boat with ID ${id} was not found in boats_built.`
+        )
       }
 
       console.log(
-        'Update data:',
-        updatePayload
+        'Boat found before update:',
+        existingBoat
       )
 
-      const {
-        data,
-        error: updateError,
-      } = await supabase
-        .from('boats_built')
-        .update(updatePayload)
-        .eq('id', id)
-        .select(
-          'id,image_url,name,type,description,featured,created_at'
-        )
+      /*
+       * STEP 2
+       * Perform UPDATE.
+       */
+
+      const { error: updateError } =
+        await supabase
+          .from('boats_built')
+          .update({
+            name: cleanName,
+            type: cleanType,
+            description:
+              cleanDescription || null,
+            featured: editFeatured,
+          })
+          .eq('id', id)
 
       if (updateError) {
         console.error(
-          'Supabase update error:',
+          'Update error:',
           updateError
         )
 
         throw updateError
       }
 
-      console.log(
-        'Supabase update result:',
-        data
-      )
-
       /*
-       * No row returned means the UPDATE did not
-       * successfully return a matching record.
-       */
-
-      if (!data || data.length === 0) {
-        throw new Error(
-          'No boat was updated. Supabase returned 0 rows. This usually means the boats_built UPDATE policy is blocking the operation.'
-        )
-      }
-
-      const updatedBoat = data[0]
-
-      /*
-       * Update local screen immediately.
-       */
-
-      setBoats(currentBoats =>
-        currentBoats.map(boat =>
-          boat.id === id
-            ? updatedBoat
-            : boat
-        )
-      )
-
-      /*
-       * Close edit mode.
-       */
-
-      cancelEditing()
-
-      setMessage(
-        'Boat information updated successfully.'
-      )
-
-      /*
-       * Read the record again from Supabase.
-       * This confirms the database contains the
-       * new information.
+       * STEP 3
+       * Read the row again directly from Supabase.
        */
 
       const {
-        data: verifiedBoat,
+        data: updatedBoat,
         error: verifyError,
       } = await supabase
         .from('boats_built')
-        .select(
-          'id,image_url,name,type,description,featured,created_at'
-        )
+        .select(`
+          id,
+          image_url,
+          name,
+          type,
+          description,
+          featured,
+          created_at,
+          boat_id,
+          engine_id,
+          addons,
+          total_price
+        `)
         .eq('id', id)
+        .maybeSingle()
 
       if (verifyError) {
         console.error(
           'Verification error:',
           verifyError
         )
-      } else {
-        console.log(
-          'Verified database record:',
-          verifiedBoat
-        )
 
-        if (
-          verifiedBoat &&
-          verifiedBoat.length > 0
-        ) {
-          setBoats(currentBoats =>
-            currentBoats.map(boat =>
-              boat.id === id
-                ? verifiedBoat[0]
-                : boat
-            )
-          )
-        }
+        throw verifyError
       }
+
+      if (!updatedBoat) {
+        throw new Error(
+          'The update completed but the updated boat could not be loaded.'
+        )
+      }
+
+      console.log(
+        'Boat after update:',
+        updatedBoat
+      )
+
+      /*
+       * STEP 4
+       * Update the screen immediately.
+       */
+
+      setBoats(current =>
+        current.map(boat =>
+          boat.id === id
+            ? (updatedBoat as BoatBuilt)
+            : boat
+        )
+      )
+
+      setMessage(
+        'Boat information updated successfully.'
+      )
+
+      cancelEditing()
 
     } catch (err: any) {
       console.error(
@@ -327,14 +376,13 @@ export default function BoatsBuiltAdminPage() {
     }
   }
 
-  async function deleteBoat(
-    boat: BoatBuilt
-  ) {
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete "${
-        boat.name || 'this boat'
-      }"?`
-    )
+  async function deleteBoat(boat: BoatBuilt) {
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to permanently delete "${
+          boat.name || 'this boat'
+        }"?`
+      )
 
     if (!confirmed) return
 
@@ -344,7 +392,7 @@ export default function BoatsBuiltAdminPage() {
 
     try {
       /*
-       * Delete image from Storage.
+       * Delete image from storage.
        */
 
       if (boat.image_url) {
@@ -380,25 +428,14 @@ export default function BoatsBuiltAdminPage() {
        */
 
       const {
-        data: deletedRows,
         error: deleteError,
       } = await supabase
         .from('boats_built')
         .delete()
         .eq('id', boat.id)
-        .select('id')
 
       if (deleteError) {
         throw deleteError
-      }
-
-      if (
-        !deletedRows ||
-        deletedRows.length === 0
-      ) {
-        throw new Error(
-          'The boat was not deleted. Supabase returned 0 deleted rows.'
-        )
       }
 
       setBoats(current =>
@@ -410,7 +447,6 @@ export default function BoatsBuiltAdminPage() {
       setMessage(
         'Boat deleted successfully.'
       )
-
     } catch (err: any) {
       console.error(
         'Delete boat error:',
@@ -495,9 +531,7 @@ export default function BoatsBuiltAdminPage() {
           htmlFor="boat-picture"
           className="flex flex-col items-center justify-center min-h-56 border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl cursor-pointer bg-black transition"
         >
-
           <div className="text-center p-6">
-
             <div className="text-5xl mb-4">
               🚤
             </div>
@@ -511,7 +545,6 @@ export default function BoatsBuiltAdminPage() {
             <p className="text-sm text-gray-500 mt-2">
               PNG, JPG, JPEG or WEBP
             </p>
-
           </div>
 
           <input
@@ -521,14 +554,12 @@ export default function BoatsBuiltAdminPage() {
             onChange={handleFileChange}
             className="hidden"
           />
-
         </label>
 
         {preview && (
           <div className="mt-6">
 
             <div className="flex items-center justify-between mb-3">
-
               <h3 className="font-semibold">
                 Preview
               </h3>
@@ -540,17 +571,14 @@ export default function BoatsBuiltAdminPage() {
               >
                 Remove
               </button>
-
             </div>
 
             <div className="rounded-xl overflow-hidden border border-slate-800 bg-black">
-
               <img
                 src={preview}
                 alt="Boat preview"
                 className="w-full max-h-[450px] object-contain"
               />
-
             </div>
 
           </div>
@@ -568,7 +596,6 @@ export default function BoatsBuiltAdminPage() {
           />
 
           <div>
-
             <span className="font-semibold">
               Feature this boat
             </span>
@@ -576,7 +603,6 @@ export default function BoatsBuiltAdminPage() {
             <p className="text-sm text-gray-500">
               Featured boats can appear on the DATA MARINE homepage.
             </p>
-
           </div>
 
         </label>
@@ -601,7 +627,6 @@ export default function BoatsBuiltAdminPage() {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
 
           <div>
-
             <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
               Portfolio
             </p>
@@ -614,11 +639,9 @@ export default function BoatsBuiltAdminPage() {
               {boats.length} boat
               {boats.length === 1 ? '' : 's'}
             </p>
-
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
-
             <span className="text-gray-500 text-sm">
               Featured
             </span>
@@ -630,7 +653,6 @@ export default function BoatsBuiltAdminPage() {
                 ).length
               }
             </span>
-
           </div>
 
         </div>
@@ -674,7 +696,6 @@ export default function BoatsBuiltAdminPage() {
                 <div className="aspect-[4/3] bg-black">
 
                   {boat.image_url ? (
-
                     <img
                       src={boat.image_url}
                       alt={
@@ -683,13 +704,10 @@ export default function BoatsBuiltAdminPage() {
                       }
                       className="w-full h-full object-cover"
                     />
-
                   ) : (
-
                     <div className="h-full flex items-center justify-center text-gray-600">
                       No image
                     </div>
-
                   )}
 
                 </div>
@@ -709,7 +727,7 @@ export default function BoatsBuiltAdminPage() {
                         </h3>
 
                         <span className="text-xs text-blue-400 bg-blue-950 border border-blue-800 px-2 py-1 rounded-full">
-                          Editing
+                          Editing #{boat.id}
                         </span>
 
                       </div>
@@ -721,7 +739,9 @@ export default function BoatsBuiltAdminPage() {
                       <input
                         value={editName}
                         onChange={e =>
-                          setEditName(e.target.value)
+                          setEditName(
+                            e.target.value
+                          )
                         }
                         placeholder="Boat Name"
                         className="w-full bg-black border border-slate-700 focus:border-blue-500 outline-none rounded-lg p-3 mb-4"
@@ -734,7 +754,9 @@ export default function BoatsBuiltAdminPage() {
                       <input
                         value={editType}
                         onChange={e =>
-                          setEditType(e.target.value)
+                          setEditType(
+                            e.target.value
+                          )
                         }
                         placeholder="Boat Type"
                         className="w-full bg-black border border-slate-700 focus:border-blue-500 outline-none rounded-lg p-3 mb-4"
@@ -769,17 +791,9 @@ export default function BoatsBuiltAdminPage() {
                           className="w-5 h-5 accent-blue-600"
                         />
 
-                        <div>
-
-                          <span className="font-semibold">
-                            Featured Boat
-                          </span>
-
-                          <p className="text-xs text-gray-500">
-                            Show this boat in the homepage featured section.
-                          </p>
-
-                        </div>
+                        <span className="font-semibold">
+                          Featured Boat
+                        </span>
 
                       </label>
 
@@ -788,7 +802,9 @@ export default function BoatsBuiltAdminPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            saveEdit(boat.id)
+                            saveEdit(
+                              boat.id
+                            )
                           }
                           disabled={savingEdit}
                           className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition disabled:opacity-50"
@@ -859,7 +875,9 @@ export default function BoatsBuiltAdminPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            startEditing(boat)
+                            startEditing(
+                              boat
+                            )
                           }
                           className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition"
                         >
@@ -869,14 +887,18 @@ export default function BoatsBuiltAdminPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            deleteBoat(boat)
+                            deleteBoat(
+                              boat
+                            )
                           }
                           disabled={
-                            deletingId === boat.id
+                            deletingId ===
+                            boat.id
                           }
                           className="bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 py-3 rounded-lg font-semibold transition disabled:opacity-50"
                         >
-                          {deletingId === boat.id
+                          {deletingId ===
+                          boat.id
                             ? 'Deleting...'
                             : '🗑️ Delete'}
                         </button>
