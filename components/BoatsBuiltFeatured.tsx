@@ -19,102 +19,111 @@ export default function BoatsBuiltFeatured() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    async function loadFeaturedBoats() {
+      try {
+        const { data, error } = await supabase
+          .from('boats_built')
+          .select(
+            'id,image_url,name,type,description,featured,created_at'
+          )
+          .eq('featured', true)
+          .order('created_at', {
+            ascending: false,
+          })
+          .limit(6)
+
+        if (error) {
+          console.error(
+            'Featured boats error:',
+            error
+          )
+          return
+        }
+
+        setBoats(data || [])
+      } catch (error) {
+        console.error(
+          'Featured boats error:',
+          error
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadFeaturedBoats()
   }, [])
 
-  async function loadFeaturedBoats() {
-    setLoading(true)
-
-    const { data, error } = await supabase
-      .from('boats_built')
-      .select(
-        'id,image_url,name,type,description,featured,created_at'
-      )
-      .eq('featured', true)
-      .order('created_at', {
-        ascending: false,
-      })
-      .limit(6)
-
-    if (error) {
-      console.error(
-        'Featured boats error:',
-        error
-      )
-
-      setBoats([])
-    } else {
-      setBoats(data || [])
-    }
-
-    setLoading(false)
-  }
-
-  if (!loading && boats.length === 0) {
-    return null
-  }
-
   return (
-    <section className="bg-slate-950 py-24 px-6">
+    <section className="bg-black py-24 px-6">
 
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}
 
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+        <div className="text-center max-w-3xl mx-auto">
 
-          <div>
+          <p className="text-blue-500 uppercase tracking-[0.3em] text-sm font-semibold">
+            Our Portfolio
+          </p>
 
-            <p className="text-blue-400 text-sm uppercase tracking-[0.25em] font-semibold">
-              Our Work
-            </p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mt-3">
+            Boats We've Built
+          </h2>
 
-            <h2 className="text-4xl md:text-5xl font-bold text-white mt-3">
-              Boats We've Built
-            </h2>
-
-            <p className="text-gray-400 max-w-2xl mt-4 text-lg leading-7">
-              Explore some of the boats designed and built by
-              DATA MARINE for our customers.
-            </p>
-
-          </div>
-
-          <Link
-            href="/boats-we-built"
-            className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition whitespace-nowrap"
-          >
-            View All Boats →
-          </Link>
+          <p className="text-gray-400 mt-5 text-lg leading-8">
+            Take a look at some of the boats designed and built
+            by DATA MARINE.
+          </p>
 
         </div>
 
         {/* LOADING */}
 
         {loading && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-            {[1, 2, 3].map(item => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 mt-14">
+
+            {[1, 2, 3].map((item) => (
+
               <div
                 key={item}
-                className="h-[420px] rounded-3xl bg-slate-900 animate-pulse"
-              />
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-pulse"
+              >
+
+                <div className="aspect-[4/3] bg-slate-800" />
+
+                <div className="p-6">
+
+                  <div className="h-6 bg-slate-800 rounded w-2/3" />
+
+                  <div className="h-4 bg-slate-800 rounded w-1/3 mt-3" />
+
+                  <div className="h-4 bg-slate-800 rounded w-full mt-5" />
+
+                  <div className="h-4 bg-slate-800 rounded w-5/6 mt-2" />
+
+                </div>
+
+              </div>
+
             ))}
 
           </div>
+
         )}
 
-        {/* BOATS */}
+        {/* FEATURED BOATS */}
 
         {!loading && boats.length > 0 && (
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 mt-14">
 
-            {boats.map(boat => (
+            {boats.map((boat) => (
 
               <article
                 key={boat.id}
-                className="group bg-slate-900 border border-slate-800 hover:border-blue-500/60 rounded-3xl overflow-hidden transition duration-300 hover:-translate-y-1"
+                className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500/60 hover:-translate-y-1 transition-all duration-300"
               >
 
                 {/* IMAGE */}
@@ -129,7 +138,7 @@ export default function BoatsBuiltFeatured() {
                         boat.name ||
                         'Boat built by DATA MARINE'
                       }
-                      className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
 
                   ) : (
@@ -144,16 +153,12 @@ export default function BoatsBuiltFeatured() {
 
                   )}
 
-                  {/* OVERLAY */}
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
-                  {/* FEATURED */}
+                  {/* FEATURED BADGE */}
 
                   <div className="absolute top-4 left-4">
 
-                    <span className="bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-full shadow-lg">
-                      Featured Build
+                    <span className="inline-flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                      ★ Featured
                     </span>
 
                   </div>
@@ -168,43 +173,36 @@ export default function BoatsBuiltFeatured() {
 
                     <div>
 
-                      <h3 className="text-2xl font-bold text-white">
+                      <h3 className="text-xl font-bold text-white">
                         {boat.name ||
-                          'DATA MARINE Build'}
+                          'DATA MARINE Boat'}
                       </h3>
 
                       {boat.type && (
-                        <p className="text-blue-400 font-semibold mt-1">
+
+                        <p className="text-blue-400 text-sm font-semibold mt-1">
                           {boat.type}
                         </p>
+
                       )}
 
                     </div>
 
-                    <span className="text-blue-400 text-xl">
-                      ⚓
-                    </span>
-
                   </div>
 
-                  {boat.description && (
+                  {boat.description ? (
 
-                    <p className="text-gray-400 mt-4 leading-6 line-clamp-3">
+                    <p className="text-gray-400 text-sm leading-6 mt-4 line-clamp-3">
                       {boat.description}
                     </p>
 
+                  ) : (
+
+                    <p className="text-gray-600 text-sm italic mt-4">
+                      Custom boat built by DATA MARINE.
+                    </p>
+
                   )}
-
-                  <div className="mt-6 pt-5 border-t border-slate-800">
-
-                    <Link
-                      href="/boats-we-built"
-                      className="text-white font-semibold hover:text-blue-400 transition"
-                    >
-                      Explore Our Builds →
-                    </Link>
-
-                  </div>
 
                 </div>
 
@@ -215,6 +213,42 @@ export default function BoatsBuiltFeatured() {
           </div>
 
         )}
+
+        {/* NO FEATURED BOATS */}
+
+        {!loading && boats.length === 0 && (
+
+          <div className="mt-14 bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center">
+
+            <div className="text-5xl mb-4">
+              🚤
+            </div>
+
+            <h3 className="text-xl font-bold text-white">
+              Our Latest Boat Projects
+            </h3>
+
+            <p className="text-gray-500 mt-2">
+              Featured completed boats will appear here.
+            </p>
+
+          </div>
+
+        )}
+
+        {/* VIEW ALL */}
+
+        <div className="text-center mt-12">
+
+          <Link
+            href="/boats-built"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3.5 rounded-xl font-bold transition"
+          >
+            View All Boats
+            <span>→</span>
+          </Link>
+
+        </div>
 
       </div>
 
