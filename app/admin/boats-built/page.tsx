@@ -13,6 +13,9 @@ type BoatBuilt = {
   created_at: string
 }
 
+const BOAT_SELECT =
+  'id,image_url,name,type,description,featured,created_at'
+
 export default function BoatsBuiltAdminPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,25 +68,19 @@ export default function BoatsBuiltAdminPage() {
     try {
       const { data, error } = await supabase
         .from('boats_built')
-        .select(
-          'id,image_url,name,type,description,featured,created_at'
-        )
+        .select(BOAT_SELECT)
         .order('created_at', {
           ascending: false,
         })
 
       if (error) {
-        console.error(
-          'Load boats error:',
-          error
-        )
-
+        console.error('Load boats error:', error)
         throw error
       }
 
-      setBoats(data || [])
+      setBoats((data || []) as BoatBuilt[])
     } catch (err: any) {
-      console.error(err)
+      console.error('Load boats error:', err)
 
       setError(
         err?.message ||
@@ -104,7 +101,15 @@ export default function BoatsBuiltAdminPage() {
 
     if (!file) return
 
+    if (!file.type.startsWith('image/')) {
+      setError(
+        'Please select a valid image file.'
+      )
+      return
+    }
+
     setSelectedFile(file)
+
     setPreview(
       URL.createObjectURL(file)
     )
@@ -164,7 +169,7 @@ export default function BoatsBuiltAdminPage() {
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            'Something went wrong while uploading the picture.'
+            'Something went wrong while uploading the boat.'
         )
       }
 
@@ -183,7 +188,7 @@ export default function BoatsBuiltAdminPage() {
 
       setError(
         err?.message ||
-          'Something went wrong while uploading the picture.'
+          'Something went wrong while uploading the boat.'
       )
     } finally {
       setUploading(false)
@@ -226,9 +231,7 @@ export default function BoatsBuiltAdminPage() {
     setSavingEdit(false)
   }
 
-  async function saveEdit(
-    id: number
-  ) {
+  async function saveEdit(id: number) {
     setMessage('')
     setError('')
 
@@ -258,59 +261,102 @@ export default function BoatsBuiltAdminPage() {
     setSavingEdit(true)
 
     try {
+      /*
+       * STEP 1
+       * Update the database.
+       *
+       * IMPORTANT:
+       * We intentionally do NOT use .select().single()
+       * here. That was causing:
+       *
+       * "Cannot coerce the result to a single JSON object"
+       */
+      const { error: updateError } =
+        await supabase
+          .from('boats_built')
+          .update({
+            name: cleanName,
+            type: cleanType,
+            description:
+              cleanDescription || null,
+            featured:
+              editFeatured,
+          })
+          .eq('id', id)
+
+      if (updateError) {
+        console.error(
+          'Update boat error:',
+          updateError
+        )
+
+        throw updateError
+      }
+
+      /*
+       * STEP 2
+       * Fetch the boat again.
+       *
+       * We use an array result instead of .single()
+       * so the page never crashes because of a
+       * single-object coercion error.
+       */
       const {
-        data,
-        error,
+        data: updatedRows,
+        error: fetchError,
       } = await supabase
         .from('boats_built')
-        .update({
-          name: cleanName,
-          type: cleanType,
-          description:
-            cleanDescription ||
-            null,
-          featured:
-            editFeatured,
-        })
+        .select(BOAT_SELECT)
         .eq('id', id)
-        .select(
-          'id,image_url,name,type,description,featured,created_at'
-        )
-        .single()
+        .limit(1)
 
-      if (error) {
+      if (fetchError) {
         console.error(
-          'Update error:',
-          error
+          'Fetch updated boat error:',
+          fetchError
         )
 
-        throw error
+        throw fetchError
       }
 
-      if (!data) {
-        throw new Error(
-          'The boat could not be updated. No updated record was returned.'
+      /*
+       * STEP 3
+       * If Supabase returned the updated boat,
+       * immediately update the admin screen.
+       */
+      if (
+        updatedRows &&
+        updatedRows.length > 0
+      ) {
+        const updatedBoat =
+          updatedRows[0] as BoatBuilt
+
+        setBoats(current =>
+          current.map(boat =>
+            boat.id === id
+              ? updatedBoat
+              : boat
+          )
         )
       }
 
-      console.log(
-        'Updated boat:',
-        data
-      )
-
-      setBoats(current =>
-        current.map(boat =>
-          boat.id === id
-            ? data
-            : boat
-        )
-      )
+      /*
+       * STEP 4
+       * Close edit mode.
+       */
+      cancelEditing()
 
       setMessage(
         'Boat information updated successfully.'
       )
 
-      cancelEditing()
+      /*
+       * STEP 5
+       * Reload from Supabase so the page is
+       * guaranteed to reflect the database.
+       */
+      await loadBoats()
+
     } catch (err: any) {
       console.error(
         'Save edit error:',
@@ -345,9 +391,8 @@ export default function BoatsBuiltAdminPage() {
 
     try {
       /*
-       * Remove image from Supabase Storage
+       * Remove image from Supabase Storage.
        */
-
       if (boat.image_url) {
         const marker =
           '/storage/v1/object/public/boats_built/'
@@ -365,8 +410,7 @@ export default function BoatsBuiltAdminPage() {
             )
 
           const {
-            error:
-              storageError,
+            error: storageError,
           } =
             await supabase.storage
               .from('boats_built')
@@ -384,9 +428,8 @@ export default function BoatsBuiltAdminPage() {
       }
 
       /*
-       * Delete database record
+       * Delete database record.
        */
-
       const {
         error: deleteError,
       } = await supabase
