@@ -32,51 +32,51 @@ type Addon = {
 const addonOptions: Addon[] = [
   {
     name: 'GPS System',
-    price: 1700000
+    price: 1700000,
   },
   {
     name: 'Marine Radio',
-    price: 650000
+    price: 650000,
   },
   {
     name: 'Display / Fish Finder',
-    price: 850000
+    price: 850000,
   },
   {
     name: 'LED Lights',
-    price: 150000
+    price: 150000,
   },
   {
     name: 'Fishing Kit',
-    price: 300000
+    price: 300000,
   },
   {
     name: 'Luxury Seats',
-    price: 250000
-  }
+    price: 250000,
+  },
 ]
 
 const colors = [
   {
     name: 'Ocean Blue',
-    value: '#1e3a8a'
+    value: '#1e3a8a',
   },
   {
     name: 'White',
-    value: '#f8fafc'
+    value: '#f8fafc',
   },
   {
     name: 'Black',
-    value: '#111827'
+    value: '#111827',
   },
   {
     name: 'Red',
-    value: '#b91c1c'
+    value: '#b91c1c',
   },
   {
     name: 'Grey',
-    value: '#64748b'
-  }
+    value: '#64748b',
+  },
 ]
 
 export default function CustomizeClient() {
@@ -131,7 +131,7 @@ export default function CustomizeClient() {
 
     const [
       boatsRes,
-      enginesRes
+      enginesRes,
     ] = await Promise.all([
       supabase
         .from('boats')
@@ -139,15 +139,15 @@ export default function CustomizeClient() {
           'id,name,category,capacity,base_price,image_url'
         )
         .order('id', {
-          ascending: true
+          ascending: true,
         }),
 
       supabase
         .from('engines')
         .select('*')
         .order('id', {
-          ascending: true
-        })
+          ascending: true,
+        }),
     ])
 
     if (boatsRes.error) {
@@ -168,16 +168,25 @@ export default function CustomizeClient() {
       boatsRes.data || []
     )
 
-   const uniqueEngines = Array.from(
-  new Map(
-    (enginesRes.data || []).map((engine) => [
-      `${engine.name}|${engine.horsepower}|${engine.stroke_type}|${engine.price}|${engine.is_new}`,
-      engine
-    ])
-  ).values()
-)
+    /*
+      Remove duplicate engine entries.
 
-setEngines(uniqueEngines)
+      If the database contains multiple identical
+      engine records, only one will appear in the
+      customer dropdown.
+    */
+    const uniqueEngines = Array.from(
+      new Map(
+        (enginesRes.data || []).map(
+          (engine) => [
+            `${engine.name}|${engine.horsepower}|${engine.stroke_type}|${engine.price}|${engine.is_new}`,
+            engine,
+          ]
+        )
+      ).values()
+    )
+
+    setEngines(uniqueEngines)
 
     setLoading(false)
   }
@@ -188,7 +197,7 @@ setEngines(uniqueEngines)
 
       const {
         data,
-        error
+        error,
       } = await supabase
         .from('boat_builds')
         .select('*')
@@ -209,8 +218,9 @@ setEngines(uniqueEngines)
       if (data.boat_id) {
         const boat =
           boats.find(
-            item =>
-              item.id === data.boat_id
+            (item) =>
+              item.id ===
+              data.boat_id
           )
 
         if (boat) {
@@ -221,8 +231,9 @@ setEngines(uniqueEngines)
       if (data.engine_id) {
         const engine =
           engines.find(
-            item =>
-              item.id === data.engine_id
+            (item) =>
+              item.id ===
+              data.engine_id
           )
 
         if (engine) {
@@ -237,13 +248,16 @@ setEngines(uniqueEngines)
       )
     }
 
-    if (boats.length > 0 || engines.length > 0) {
+    if (
+      boats.length > 0 ||
+      engines.length > 0
+    ) {
       loadBuild()
     }
   }, [
     buildId,
     boats,
-    engines
+    engines,
   ])
 
   const boatPrice =
@@ -264,7 +278,7 @@ setEngines(uniqueEngines)
       ) => {
         const addon =
           addonOptions.find(
-            item =>
+            (item) =>
               item.name ===
               addonName
           )
@@ -294,11 +308,13 @@ setEngines(uniqueEngines)
     e: React.ChangeEvent<HTMLSelectElement>
   ) {
     const id =
-      Number(e.target.value)
+      Number(
+        e.target.value
+      )
 
     const engine =
       engines.find(
-        item =>
+        (item) =>
           item.id === id
       ) || null
 
@@ -312,26 +328,29 @@ setEngines(uniqueEngines)
     checked: boolean
   ) {
     if (checked) {
-      setAddons(current => {
-        if (
-          current.includes(
-            addonName
-          )
-        ) {
-          return current
-        }
+      setAddons(
+        (current) => {
+          if (
+            current.includes(
+              addonName
+            )
+          ) {
+            return current
+          }
 
-        return [
-          ...current,
-          addonName
-        ]
-      })
+          return [
+            ...current,
+            addonName,
+          ]
+        }
+      )
     } else {
-      setAddons(current =>
-        current.filter(
-          item =>
-            item !== addonName
-        )
+      setAddons(
+        (current) =>
+          current.filter(
+            (item) =>
+              item !== addonName
+          )
       )
     }
   }
@@ -372,7 +391,7 @@ setEngines(uniqueEngines)
         uuidv4()
 
       const {
-        error
+        error,
       } = await supabase
         .from('quotes')
         .insert({
@@ -406,7 +425,7 @@ setEngines(uniqueEngines)
           notes:
             `Boat color: ${
               colors.find(
-                item =>
+                (item) =>
                   item.value ===
                   color
               )?.name ||
@@ -433,7 +452,7 @@ setEngines(uniqueEngines)
             'quote_sent',
 
           order_stage:
-            'quote_sent'
+            'quote_sent',
         })
 
       if (error) {
@@ -451,7 +470,7 @@ setEngines(uniqueEngines)
         )}%0A` +
         `Color: ${encodeURIComponent(
           colors.find(
-            item =>
+            (item) =>
               item.value ===
               color
           )?.name ||
@@ -525,7 +544,7 @@ setEngines(uniqueEngines)
 
     try {
       const {
-        error
+        error,
       } = await supabase
         .from('boat_builds')
         .insert({
@@ -539,7 +558,7 @@ setEngines(uniqueEngines)
             addons,
 
           total_price:
-            total
+            total,
         })
 
       if (error) {
@@ -567,9 +586,7 @@ setEngines(uniqueEngines)
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-
         <div className="text-center">
-
           <div className="text-5xl mb-5">
             🚤
           </div>
@@ -581,16 +598,14 @@ setEngines(uniqueEngines)
           <p className="text-gray-500 mt-2">
             Preparing your customization options.
           </p>
-
         </div>
-
       </main>
     )
   }
 
   const selectedColorName =
     colors.find(
-      item =>
+      (item) =>
         item.value === color
     )?.name || 'Custom'
 
@@ -600,11 +615,9 @@ setEngines(uniqueEngines)
       {/* HEADER */}
 
       <header className="border-b border-slate-800 bg-slate-950">
-
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
           <div>
-
             <p className="text-sm uppercase tracking-[0.25em] text-blue-400 font-semibold">
               DATA MARINE ⚓
             </p>
@@ -616,7 +629,6 @@ setEngines(uniqueEngines)
             <p className="text-gray-500 mt-2">
               Configure your boat to your preference.
             </p>
-
           </div>
 
           <Link
@@ -627,7 +639,6 @@ setEngines(uniqueEngines)
           </Link>
 
         </div>
-
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -658,17 +669,15 @@ setEngines(uniqueEngines)
                 className="relative min-h-[360px] flex items-center justify-center overflow-hidden transition-all duration-500"
                 style={{
                   background:
-                    `linear-gradient(135deg, ${color} 0%, #020617 100%)`
+                    `linear-gradient(135deg, ${color} 0%, #020617 100%)`,
                 }}
               >
-
-                {/* Soft professional color atmosphere */}
 
                 <div
                   className="absolute inset-0 transition-all duration-500"
                   style={{
                     background:
-                      `radial-gradient(circle at 50% 45%, ${color}45 0%, transparent 55%)`
+                      `radial-gradient(circle at 50% 45%, ${color}45 0%, transparent 55%)`,
                   }}
                 />
 
@@ -684,7 +693,7 @@ setEngines(uniqueEngines)
                         className="absolute inset-8 rounded-full blur-3xl opacity-40 transition-all duration-500"
                         style={{
                           backgroundColor:
-                            color
+                            color,
                         }}
                       />
 
@@ -709,7 +718,7 @@ setEngines(uniqueEngines)
                           color,
 
                         boxShadow:
-                          `0 25px 60px ${color}80`
+                          `0 25px 60px ${color}80`,
                       }}
                     >
 
@@ -737,6 +746,7 @@ setEngines(uniqueEngines)
                   {selectedBoat && (
                     <p className="text-white/70 mt-2">
                       {selectedColorName}
+
                       {selectedEngine
                         ? ` • ${selectedEngine.name}`
                         : ''}
@@ -784,14 +794,13 @@ setEngines(uniqueEngines)
                 <div className="grid md:grid-cols-2 gap-4">
 
                   {boats.map(
-                    boat => {
+                    (boat) => {
 
                       const isSelected =
                         selectedBoat?.id ===
                         boat.id
 
                       return (
-
                         <button
                           key={boat.id}
                           type="button"
@@ -874,7 +883,8 @@ setEngines(uniqueEngines)
                             </p>
 
                             <p className="text-blue-400 font-bold text-lg mt-4">
-                              ₦{Number(
+                              ₦
+                              {Number(
                                 boat.base_price
                               ).toLocaleString()}
                             </p>
@@ -882,7 +892,6 @@ setEngines(uniqueEngines)
                           </div>
 
                         </button>
-
                       )
                     }
                   )}
@@ -916,7 +925,7 @@ setEngines(uniqueEngines)
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
 
                 {colors.map(
-                  item => (
+                  (item) => (
 
                     <button
                       key={item.value}
@@ -938,7 +947,7 @@ setEngines(uniqueEngines)
                         className="w-full h-12 rounded-xl border border-white/10"
                         style={{
                           backgroundColor:
-                            item.value
+                            item.value,
                         }}
                       />
 
@@ -969,6 +978,10 @@ setEngines(uniqueEngines)
                   Select Your Engine
                 </h2>
 
+                <p className="text-gray-500 mt-1">
+                  Choose the engine you want for your boat.
+                </p>
+
               </div>
 
               <select
@@ -987,17 +1000,20 @@ setEngines(uniqueEngines)
                 </option>
 
                 {engines.map(
-                  engine => (
+                  (engine) => (
 
                     <option
                       key={engine.id}
                       value={engine.id}
                     >
                       {engine.name}
+
                       {engine.horsepower
                         ? ` - ${engine.horsepower}`
                         : ''}
+
                       {' - ₦'}
+
                       {Number(
                         engine.price
                       ).toLocaleString()}
@@ -1033,7 +1049,7 @@ setEngines(uniqueEngines)
               <div className="grid md:grid-cols-2 gap-3">
 
                 {addonOptions.map(
-                  addon => (
+                  (addon) => (
 
                     <label
                       key={addon.name}
@@ -1053,7 +1069,7 @@ setEngines(uniqueEngines)
                           checked={addons.includes(
                             addon.name
                           )}
-                          onChange={e =>
+                          onChange={(e) =>
                             toggleAddon(
                               addon.name,
                               e.target.checked
@@ -1069,7 +1085,8 @@ setEngines(uniqueEngines)
                       </div>
 
                       <span className="text-blue-400 font-semibold whitespace-nowrap">
-                        ₦{addon.price.toLocaleString()}
+                        ₦
+                        {addon.price.toLocaleString()}
                       </span>
 
                     </label>
@@ -1107,7 +1124,7 @@ setEngines(uniqueEngines)
                   type="text"
                   placeholder="Full Name"
                   value={name}
-                  onChange={e =>
+                  onChange={(e) =>
                     setName(
                       e.target.value
                     )
@@ -1119,7 +1136,7 @@ setEngines(uniqueEngines)
                   type="tel"
                   placeholder="Phone / WhatsApp Number"
                   value={phone}
-                  onChange={e =>
+                  onChange={(e) =>
                     setPhone(
                       e.target.value
                     )
@@ -1131,7 +1148,7 @@ setEngines(uniqueEngines)
                   type="email"
                   placeholder="Email Address"
                   value={email}
-                  onChange={e =>
+                  onChange={(e) =>
                     setEmail(
                       e.target.value
                     )
@@ -1142,7 +1159,7 @@ setEngines(uniqueEngines)
                 <textarea
                   placeholder="Additional requirements or comments"
                   value={notes}
-                  onChange={e =>
+                  onChange={(e) =>
                     setNotes(
                       e.target.value
                     )
@@ -1157,7 +1174,7 @@ setEngines(uniqueEngines)
 
           </div>
 
-          {/* RIGHT */}
+          {/* RIGHT — FINAL REVIEW */}
 
           <aside className="lg:sticky lg:top-6 h-fit">
 
@@ -1177,58 +1194,57 @@ setEngines(uniqueEngines)
 
               <div className="p-6 space-y-5">
 
+                {/* SHARP COLOR FINAL REVIEW */}
+
                 {selectedBoat?.image_url && (
-  <div
-    className="relative rounded-2xl overflow-hidden p-3 transition-all duration-500"
-    style={{
-      background: `linear-gradient(
-        135deg,
-        ${color} 0%,
-        ${color}cc 45%,
-        #020617 100%
-      )`,
-      boxShadow: `0 12px 40px ${color}55`,
-    }}
-  >
-    {/* Bright color atmosphere */}
-    <div
-      className="absolute inset-0 transition-all duration-500"
-      style={{
-        background: `radial-gradient(
-          circle at 50% 45%,
-          #ffffff35 0%,
-          transparent 45%
-        )`,
-      }}
-    />
+                  <div
+                    className="relative rounded-2xl overflow-hidden p-3 transition-all duration-500"
+                    style={{
+                      background:
+                        `linear-gradient(
+                          135deg,
+                          ${color} 0%,
+                          ${color}cc 45%,
+                          #020617 100%
+                        )`,
+                      boxShadow:
+                        `0 12px 40px ${color}55`,
+                    }}
+                  >
 
-    {/* Selected color indicator */}
-    <div className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20">
-      <span
-        className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
-        style={{
-          backgroundColor: color,
-        }}
-      />
+                    {/* Bright atmosphere */}
 
-      <span className="text-xs font-semibold text-white">
-        {selectedColorName}
-      </span>
-    </div>
-
-    {/* Boat image */}
-    <img
-      src={selectedBoat.image_url}
-      alt={selectedBoat.name}
-      className="relative z-10 w-full h-40 object-contain drop-shadow-2xl"
-    />
-  </div>
-)}
-
-  </div>
-
-)}
+                    <div
+                      className="absolute inset-0 transition-all duration-500"
+                      style={{
+                        background:
+                          `radial-gradient(
+                            circle at 50% 45%,
+                            #ffffff35 0%,
+                            transparent 45%
+                          )`,
+                      }}
                     />
+
+                    {/* Color indicator */}
+
+                    <div className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20">
+
+                      <span
+                        className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                        style={{
+                          backgroundColor:
+                            color,
+                        }}
+                      />
+
+                      <span className="text-xs font-semibold text-white">
+                        {selectedColorName}
+                      </span>
+
+                    </div>
+
+                    {/* Boat image */}
 
                     <img
                       src={
@@ -1237,12 +1253,13 @@ setEngines(uniqueEngines)
                       alt={
                         selectedBoat.name
                       }
-                      className="relative w-full h-40 object-contain"
+                      className="relative z-10 w-full h-40 object-contain drop-shadow-2xl"
                     />
 
                   </div>
-
                 )}
+
+                {/* BOAT */}
 
                 <div className="flex justify-between gap-5">
 
@@ -1257,6 +1274,8 @@ setEngines(uniqueEngines)
 
                 </div>
 
+                {/* COLOR */}
+
                 <div className="flex justify-between gap-5">
 
                   <span className="text-gray-500">
@@ -1269,7 +1288,7 @@ setEngines(uniqueEngines)
                       className="w-5 h-5 rounded-full border border-white/20"
                       style={{
                         backgroundColor:
-                          color
+                          color,
                       }}
                     />
 
@@ -1280,6 +1299,8 @@ setEngines(uniqueEngines)
                   </div>
 
                 </div>
+
+                {/* ENGINE */}
 
                 <div className="flex justify-between gap-5">
 
@@ -1293,6 +1314,8 @@ setEngines(uniqueEngines)
                   </span>
 
                 </div>
+
+                {/* EQUIPMENT */}
 
                 <div className="border-t border-slate-800 pt-5">
 
@@ -1311,7 +1334,7 @@ setEngines(uniqueEngines)
                     <div className="space-y-2">
 
                       {addons.map(
-                        addon => (
+                        (addon) => (
 
                           <div
                             key={addon}
@@ -1323,9 +1346,10 @@ setEngines(uniqueEngines)
                             </span>
 
                             <span className="text-blue-400">
-                              ₦{Number(
+                              ₦
+                              {Number(
                                 addonOptions.find(
-                                  item =>
+                                  (item) =>
                                     item.name ===
                                     addon
                                 )?.price ||
@@ -1344,6 +1368,8 @@ setEngines(uniqueEngines)
 
                 </div>
 
+                {/* PRICE BREAKDOWN */}
+
                 <div className="border-t border-slate-800 pt-5 space-y-3">
 
                   <div className="flex justify-between">
@@ -1353,7 +1379,8 @@ setEngines(uniqueEngines)
                     </span>
 
                     <span>
-                      ₦{boatPrice.toLocaleString()}
+                      ₦
+                      {boatPrice.toLocaleString()}
                     </span>
 
                   </div>
@@ -1365,7 +1392,8 @@ setEngines(uniqueEngines)
                     </span>
 
                     <span>
-                      ₦{enginePrice.toLocaleString()}
+                      ₦
+                      {enginePrice.toLocaleString()}
                     </span>
 
                   </div>
@@ -1377,12 +1405,15 @@ setEngines(uniqueEngines)
                     </span>
 
                     <span>
-                      ₦{addonPrice.toLocaleString()}
+                      ₦
+                      {addonPrice.toLocaleString()}
                     </span>
 
                   </div>
 
                 </div>
+
+                {/* TOTAL */}
 
                 <div className="bg-blue-950 border border-blue-800 rounded-2xl p-5">
 
@@ -1391,7 +1422,8 @@ setEngines(uniqueEngines)
                   </p>
 
                   <p className="text-3xl font-bold mt-1">
-                    ₦{total.toLocaleString()}
+                    ₦
+                    {total.toLocaleString()}
                   </p>
 
                   <p className="text-xs text-blue-300/60 mt-2">
@@ -1399,6 +1431,8 @@ setEngines(uniqueEngines)
                   </p>
 
                 </div>
+
+                {/* REQUEST QUOTE */}
 
                 <button
                   type="button"
@@ -1414,6 +1448,8 @@ setEngines(uniqueEngines)
                     ? 'Sending Quote...'
                     : 'Request Quote'}
                 </button>
+
+                {/* SAVE BUILD */}
 
                 <button
                   type="button"
