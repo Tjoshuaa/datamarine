@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import FeaturedProducts from "@/components/FeaturedProducts";
+import BoatsBuiltFeatured from "@/components/BoatsBuiltFeatured";
 
 export default function HomePage() {
   return (
@@ -9,6 +10,8 @@ export default function HomePage() {
       <Hero />
 
       <FeaturedProducts />
+      
+      <BoatsBuiltFeatured />
 
       {/* FEATURES */}
 
