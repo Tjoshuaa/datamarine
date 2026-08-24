@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY
 
-if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL')
-}
-
-if (!serviceRoleKey) {
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
+if (!supabaseUrl || !supabaseSecretKey) {
+  throw new Error(
+    'Missing SUPABASE_URL or SUPABASE_SECRET_KEY environment variables.'
+  )
 }
 
 const supabaseAdmin = createClient(
   supabaseUrl,
-  serviceRoleKey,
+  supabaseSecretKey,
   {
     auth: {
       autoRefreshToken: false,
@@ -23,86 +21,28 @@ const supabaseAdmin = createClient(
   }
 )
 
-/*
-|--------------------------------------------------------------------------
-| GET
-|--------------------------------------------------------------------------
-| Load all completed boats.
-*/
-
-export async function GET() {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('boats_built')
-      .select(
-        'id,created_at,image_url,name,description,featured,type,boat_id,engine_id,addons,total_price'
-      )
-      .order('created_at', {
-        ascending: false,
-      })
-
-    if (error) {
-      console.error('GET boats_built error:', error)
-
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        {
-          status: 500,
-        }
-      )
-    }
-
-    return NextResponse.json({
-      boats: data || [],
-    })
-  } catch (error: any) {
-    console.error('GET boats_built exception:', error)
-
-    return NextResponse.json(
-      {
-        error:
-          error?.message ||
-          'Failed to load boats.',
-      },
-      {
-        status: 500,
-      }
-    )
-  }
-}
+const BUCKET = 'boats_built'
+const TABLE = 'boats_built'
 
 /*
 |--------------------------------------------------------------------------
-| POST
-|--------------------------------------------------------------------------
-| Upload a completed boat image.
+| POST — Upload a completed boat
 |--------------------------------------------------------------------------
 */
 
-export async function POST(
-  request: NextRequest
-) {
+export async function POST(request: NextRequest) {
   try {
-    const formData =
-      await request.formData()
+    const formData = await request.formData()
 
-    const file =
-      formData.get('file')
-
-    const featuredValue =
-      formData.get('featured')
+    const file = formData.get('file')
+    const featuredValue = formData.get('featured')
 
     if (!(file instanceof File)) {
       return NextResponse.json(
         {
-          error:
-            'No boat image was provided.',
+          error: 'No boat image was provided.',
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       )
     }
 
@@ -110,37 +50,33 @@ export async function POST(
       featuredValue === 'true'
 
     const extension =
-      file.name.split('.').pop()?.toLowerCase() ||
-      'jpg'
+      file.name.split('.').pop()?.toLowerCase() || 'jpg'
 
     const fileName =
-      `${Date.now()}-${Math.random()
+      `boat-${Date.now()}-${Math.random()
         .toString(36)
-        .substring(2)}.${extension}`
+        .substring(2, 10)}.${extension}`
 
-    const filePath =
-      `completed-boats/${fileName}`
+    const filePath = fileName
 
-    const arrayBuffer =
-      await file.arrayBuffer()
+    const fileBuffer = await file.arrayBuffer()
 
-    const buffer =
-      Buffer.from(arrayBuffer)
+    /*
+     * Upload image
+     */
 
-    const {
-      error: uploadError,
-    } = await supabaseAdmin.storage
-      .from('boats_built')
-      .upload(
-        filePath,
-        buffer,
-        {
-          contentType:
-            file.type ||
-            'image/jpeg',
-          upsert: false,
-        }
-      )
+    const { error: uploadError } =
+      await supabaseAdmin.storage
+        .from(BUCKET)
+        .upload(
+          filePath,
+          fileBuffer,
+          {
+            contentType:
+              file.type || 'image/jpeg',
+            upsert: false,
+          }
+        )
 
     if (uploadError) {
       console.error(
@@ -151,76 +87,81 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            uploadError.message,
+            uploadError.message ||
+            'Failed to upload boat image.',
         },
-        {
-          status: 500,
-        }
+        { status: 500 }
       )
     }
+
+    /*
+     * Get public image URL
+     */
 
     const {
       data: publicUrlData,
     } =
       supabaseAdmin.storage
-        .from('boats_built')
-        .getPublicUrl(
-          filePath
-        )
+        .from(BUCKET)
+        .getPublicUrl(filePath)
 
     const imageUrl =
       publicUrlData.publicUrl
 
-    const {
-      data: boat,
-      error: insertError,
-    } = await supabaseAdmin
-      .from('boats_built')
-      .insert({
-        image_url: imageUrl,
-        featured,
-        name: null,
-        type: null,
-        description: null,
-        addons: {},
-        total_price: 0,
-      })
-      .select(
-        'id,created_at,image_url,name,description,featured,type,boat_id,engine_id,addons,total_price'
-      )
-      .single()
+    /*
+     * Insert boat record
+     */
+
+    const { data, error: insertError } =
+      await supabaseAdmin
+        .from(TABLE)
+        .insert({
+          image_url: imageUrl,
+          featured,
+          name: null,
+          type: null,
+          description: null,
+        })
+        .select(
+          'id,image_url,name,type,description,featured,created_at'
+        )
+        .single()
 
     if (insertError) {
       console.error(
-        'Insert boats_built error:',
+        'Boat database insert error:',
         insertError
       )
 
-      // Remove uploaded image if database insert fails.
+      /*
+       * Remove uploaded image if
+       * database insert fails.
+       */
+
       await supabaseAdmin.storage
-        .from('boats_built')
-        .remove([
-          filePath,
-        ])
+        .from(BUCKET)
+        .remove([filePath])
 
       return NextResponse.json(
         {
           error:
-            insertError.message,
+            insertError.message ||
+            'Failed to save boat information.',
         },
-        {
-          status: 500,
-        }
+        { status: 500 }
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      boat,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        boat: data,
+      },
+      { status: 201 }
+    )
   } catch (error: any) {
     console.error(
-      'POST boats_built exception:',
+      'POST boats-built error:',
       error
     )
 
@@ -228,20 +169,16 @@ export async function POST(
       {
         error:
           error?.message ||
-          'Failed to upload boat.',
+          'Failed to add boat.',
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     )
   }
 }
 
 /*
 |--------------------------------------------------------------------------
-| PATCH
-|--------------------------------------------------------------------------
-| Edit boat information.
+| PATCH — Edit boat
 |--------------------------------------------------------------------------
 */
 
@@ -249,11 +186,9 @@ export async function PATCH(
   request: NextRequest
 ) {
   try {
-    const body =
-      await request.json()
+    const body = await request.json()
 
-    const id =
-      Number(body.id)
+    const id = Number(body.id)
 
     if (!id || Number.isNaN(id)) {
       return NextResponse.json(
@@ -261,9 +196,7 @@ export async function PATCH(
           error:
             'A valid boat ID is required.',
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       )
     }
 
@@ -289,11 +222,9 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            'Boat name is required.',
+            'Please enter a boat name.',
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       )
     }
 
@@ -301,24 +232,136 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            'Boat type is required.',
+            'Please enter a boat type.',
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       )
     }
 
     /*
-     * First confirm the boat exists.
+     * Update using the Supabase
+     * server-side secret key.
+     *
+     * This bypasses the client's
+     * RLS authentication problem.
      */
 
     const {
-      data: existingBoat,
+      data,
+      error: updateError,
+    } = await supabaseAdmin
+      .from(TABLE)
+      .update({
+        name,
+        type,
+        description:
+          description || null,
+        featured,
+      })
+      .eq('id', id)
+      .select(
+        'id,image_url,name,type,description,featured,created_at'
+      )
+
+    if (updateError) {
+      console.error(
+        'Boat update error:',
+        updateError
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            updateError.message ||
+            'Failed to update boat.',
+        },
+        { status: 500 }
+      )
+    }
+
+    /*
+     * Important:
+     *
+     * Do NOT use .single() here.
+     *
+     * If the ID doesn't exist,
+     * Supabase returns an empty array
+     * instead of throwing the
+     * "Cannot coerce the result to a
+     * single JSON object" error.
+     */
+
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            `No boat was updated for ID ${id}. The boat does not exist in the boats_built table.`,
+        },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        boat: data[0],
+      },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error(
+      'PATCH boats-built error:',
+      error
+    )
+
+    return NextResponse.json(
+      {
+        error:
+          error?.message ||
+          'Failed to update boat.',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| DELETE — Delete completed boat
+|--------------------------------------------------------------------------
+*/
+
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
+    const body = await request.json()
+
+    const id = Number(body.id)
+
+    if (!id || Number.isNaN(id)) {
+      return NextResponse.json(
+        {
+          error:
+            'A valid boat ID is required.',
+        },
+        { status: 400 }
+      )
+    }
+
+    /*
+     * First get the boat so we can
+     * remove its image from storage.
+     */
+
+    const {
+      data: boat,
       error: findError,
     } = await supabaseAdmin
-      .from('boats_built')
-      .select('id')
+      .from(TABLE)
+      .select(
+        'id,image_url'
+      )
       .eq('id', id)
       .maybeSingle()
 
@@ -331,151 +374,10 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            findError.message,
+            findError.message ||
+            'Failed to find boat.',
         },
-        {
-          status: 500,
-        }
-      )
-    }
-
-    if (!existingBoat) {
-      return NextResponse.json(
-        {
-          error:
-            `No boat exists with ID ${id}.`,
-        },
-        {
-          status: 404,
-        }
-      )
-    }
-
-    /*
-     * Update using the server-side Supabase
-     * service-role client.
-     */
-
-    const {
-      data: updatedBoat,
-      error: updateError,
-    } = await supabaseAdmin
-      .from('boats_built')
-      .update({
-        name,
-        type,
-        description:
-          description || null,
-        featured,
-      })
-      .eq('id', id)
-      .select(
-        'id,created_at,image_url,name,description,featured,type,boat_id,engine_id,addons,total_price'
-      )
-      .maybeSingle()
-
-    if (updateError) {
-      console.error(
-        'Update boats_built error:',
-        updateError
-      )
-
-      return NextResponse.json(
-        {
-          error:
-            updateError.message,
-        },
-        {
-          status: 500,
-        }
-      )
-    }
-
-    if (!updatedBoat) {
-      return NextResponse.json(
-        {
-          error:
-            `No boat was updated for ID ${id}.`,
-        },
-        {
-          status: 500,
-        }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      boat: updatedBoat,
-    })
-  } catch (error: any) {
-    console.error(
-      'PATCH boats_built exception:',
-      error
-    )
-
-    return NextResponse.json(
-      {
-        error:
-          error?.message ||
-          'Failed to update boat.',
-      },
-      {
-        status: 500,
-      }
-    )
-  }
-}
-
-/*
-|--------------------------------------------------------------------------
-| DELETE
-|--------------------------------------------------------------------------
-| Delete boat and its image.
-|--------------------------------------------------------------------------
-*/
-
-export async function DELETE(
-  request: NextRequest
-) {
-  try {
-    const body =
-      await request.json()
-
-    const id =
-      Number(body.id)
-
-    if (!id || Number.isNaN(id)) {
-      return NextResponse.json(
-        {
-          error:
-            'A valid boat ID is required.',
-        },
-        {
-          status: 400,
-        }
-      )
-    }
-
-    const {
-      data: boat,
-      error: findError,
-    } = await supabaseAdmin
-      .from('boats_built')
-      .select(
-        'id,image_url'
-      )
-      .eq('id', id)
-      .maybeSingle()
-
-    if (findError) {
-      return NextResponse.json(
-        {
-          error:
-            findError.message,
-        },
-        {
-          status: 500,
-        }
+        { status: 500 }
       )
     }
 
@@ -483,70 +385,35 @@ export async function DELETE(
       return NextResponse.json(
         {
           error:
-            `No boat exists with ID ${id}.`,
+            `Boat with ID ${id} was not found.`,
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       )
     }
 
     /*
-     * Delete database record.
-     */
-
-    const {
-      error: deleteError,
-    } = await supabaseAdmin
-      .from('boats_built')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      console.error(
-        'Delete boat error:',
-        deleteError
-      )
-
-      return NextResponse.json(
-        {
-          error:
-            deleteError.message,
-        },
-        {
-          status: 500,
-        }
-      )
-    }
-
-    /*
-     * Delete image from storage.
+     * Delete image from storage
      */
 
     if (boat.image_url) {
       const marker =
-        '/storage/v1/object/public/boats_built/'
+        `/storage/v1/object/public/${BUCKET}/`
 
       const position =
-        boat.image_url.indexOf(
-          marker
-        )
+        boat.image_url.indexOf(marker)
 
       if (position !== -1) {
         const filePath =
           boat.image_url.substring(
-            position +
-              marker.length
+            position + marker.length
           )
 
         const {
           error: storageError,
         } =
           await supabaseAdmin.storage
-            .from('boats_built')
-            .remove([
-              filePath,
-            ])
+            .from(BUCKET)
+            .remove([filePath])
 
         if (storageError) {
           console.error(
@@ -557,14 +424,60 @@ export async function DELETE(
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message:
-        'Boat deleted successfully.',
-    })
+    /*
+     * Delete database record
+     */
+
+    const {
+      data: deletedBoat,
+      error: deleteError,
+    } =
+      await supabaseAdmin
+        .from(TABLE)
+        .delete()
+        .eq('id', id)
+        .select('id')
+
+    if (deleteError) {
+      console.error(
+        'Database delete error:',
+        deleteError
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            deleteError.message ||
+            'Failed to delete boat.',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (
+      !deletedBoat ||
+      deletedBoat.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Boat with ID ${id} could not be deleted.`,
+        },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          'Boat deleted successfully.',
+      },
+      { status: 200 }
+    )
   } catch (error: any) {
     console.error(
-      'DELETE boats_built exception:',
+      'DELETE boats-built error:',
       error
     )
 
@@ -574,9 +487,7 @@ export async function DELETE(
           error?.message ||
           'Failed to delete boat.',
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     )
   }
 }
