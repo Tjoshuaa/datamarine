@@ -16,7 +16,6 @@ type BoatBuilt = {
 export default function BoatsBuiltAdminPage() {
   const [boats, setBoats] = useState<BoatBuilt[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
 
   const [selectedFile, setSelectedFile] =
@@ -25,23 +24,35 @@ export default function BoatsBuiltAdminPage() {
   const [preview, setPreview] =
     useState<string | null>(null)
 
-  const [newName, setNewName] = useState('')
-  const [newType, setNewType] = useState('')
-  const [newDescription, setNewDescription] = useState('')
-  const [newFeatured, setNewFeatured] = useState(false)
+  const [featured, setFeatured] =
+    useState(false)
 
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [message, setMessage] =
+    useState('')
+
+  const [error, setError] =
+    useState('')
 
   const [editingId, setEditingId] =
     useState<number | null>(null)
 
-  const [editName, setEditName] = useState('')
-  const [editType, setEditType] = useState('')
+  const [editName, setEditName] =
+    useState('')
+
+  const [editType, setEditType] =
+    useState('')
+
   const [editDescription, setEditDescription] =
     useState('')
+
   const [editFeatured, setEditFeatured] =
     useState(false)
+
+  const [savingEdit, setSavingEdit] =
+    useState(false)
+
+  const [deletingId, setDeletingId] =
+    useState<number | null>(null)
 
   useEffect(() => {
     loadBoats()
@@ -51,62 +62,72 @@ export default function BoatsBuiltAdminPage() {
     setLoading(true)
     setError('')
 
-    const { data, error } = await supabase
-      .from('boats_built')
-      .select(
-        'id,image_url,name,type,description,featured,created_at'
-      )
-      .order('created_at', {
-        ascending: false,
-      })
+    try {
+      const { data, error } = await supabase
+        .from('boats_built')
+        .select(
+          'id,image_url,name,type,description,featured,created_at'
+        )
+        .order('created_at', {
+          ascending: false,
+        })
 
-    if (error) {
-      console.error('Load boats error:', error)
-      setError(error.message)
-      setBoats([])
-    } else {
+      if (error) {
+        console.error(
+          'Load boats error:',
+          error
+        )
+
+        throw error
+      }
+
       setBoats(data || [])
-    }
+    } catch (err: any) {
+      console.error(err)
 
-    setLoading(false)
+      setError(
+        err?.message ||
+          'Failed to load boats.'
+      )
+
+      setBoats([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleFileChange(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
-    const file = event.target.files?.[0]
+    const file =
+      event.target.files?.[0]
 
     if (!file) return
 
     setSelectedFile(file)
-    setPreview(URL.createObjectURL(file))
+    setPreview(
+      URL.createObjectURL(file)
+    )
 
     setMessage('')
     setError('')
   }
 
-  function clearNewBoatForm() {
+  function clearSelectedFile() {
+    if (preview) {
+      URL.revokeObjectURL(preview)
+    }
+
     setSelectedFile(null)
     setPreview(null)
-    setNewName('')
-    setNewType('')
-    setNewDescription('')
-    setNewFeatured(false)
+    setFeatured(false)
   }
 
   async function uploadBoat() {
     if (!selectedFile) {
-      setError('Please select a boat picture first.')
-      return
-    }
-
-    if (!newName.trim()) {
-      setError('Please enter the boat name.')
-      return
-    }
-
-    if (!newType.trim()) {
-      setError('Please enter the boat type.')
+      setError(
+        'Please select a boat picture first.'
+      )
       return
     }
 
@@ -115,57 +136,63 @@ export default function BoatsBuiltAdminPage() {
     setError('')
 
     try {
-      const formData = new FormData()
+      const formData =
+        new FormData()
 
-      formData.append('file', selectedFile)
-      formData.append('name', newName.trim())
-      formData.append('type', newType.trim())
       formData.append(
-        'description',
-        newDescription.trim()
+        'file',
+        selectedFile
       )
+
       formData.append(
         'featured',
-        String(newFeatured)
+        String(featured)
       )
 
-      const response = await fetch(
-        '/api/admin/boats-built',
-        {
-          method: 'POST',
-          body: formData,
-        }
-      )
+      const response =
+        await fetch(
+          '/api/admin/boats-built',
+          {
+            method: 'POST',
+            body: formData,
+          }
+        )
 
-      const result = await response.json()
+      const result =
+        await response.json()
 
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            'Failed to upload boat.'
+            'Something went wrong while uploading the picture.'
         )
       }
 
       setMessage(
-        'Boat added successfully.'
+        'Boat picture uploaded successfully.'
       )
 
-      clearNewBoatForm()
+      clearSelectedFile()
 
       await loadBoats()
     } catch (err: any) {
-      console.error('Upload boat error:', err)
+      console.error(
+        'Upload boat error:',
+        err
+      )
 
       setError(
         err?.message ||
-          'Failed to upload boat.'
+          'Something went wrong while uploading the picture.'
       )
     } finally {
       setUploading(false)
     }
   }
 
-  function startEditing(boat: BoatBuilt) {
+  function startEditing(
+    boat: BoatBuilt
+  ) {
     setEditingId(boat.id)
 
     setEditName(
@@ -190,39 +217,60 @@ export default function BoatsBuiltAdminPage() {
 
   function cancelEditing() {
     setEditingId(null)
+
     setEditName('')
     setEditType('')
     setEditDescription('')
     setEditFeatured(false)
+
+    setSavingEdit(false)
   }
 
-  async function saveEdit(id: number) {
-    if (!editName.trim()) {
-      setError('Boat name cannot be empty.')
-      return
-    }
-
-    if (!editType.trim()) {
-      setError('Boat type cannot be empty.')
-      return
-    }
-
-    setSaving(true)
+  async function saveEdit(
+    id: number
+  ) {
     setMessage('')
     setError('')
+
+    const cleanName =
+      editName.trim()
+
+    const cleanType =
+      editType.trim()
+
+    const cleanDescription =
+      editDescription.trim()
+
+    if (!cleanName) {
+      setError(
+        'Please enter a boat name.'
+      )
+      return
+    }
+
+    if (!cleanType) {
+      setError(
+        'Please enter a boat type.'
+      )
+      return
+    }
+
+    setSavingEdit(true)
 
     try {
       const {
         data,
-        error: updateError,
+        error,
       } = await supabase
         .from('boats_built')
         .update({
-          name: editName.trim(),
-          type: editType.trim(),
+          name: cleanName,
+          type: cleanType,
           description:
-            editDescription.trim() || null,
-          featured: editFeatured,
+            cleanDescription ||
+            null,
+          featured:
+            editFeatured,
         })
         .eq('id', id)
         .select(
@@ -230,17 +278,26 @@ export default function BoatsBuiltAdminPage() {
         )
         .single()
 
-      if (updateError) {
-        throw updateError
+      if (error) {
+        console.error(
+          'Update error:',
+          error
+        )
+
+        throw error
       }
 
       if (!data) {
         throw new Error(
-          'The boat was not updated. Supabase did not return an updated record. Check your Row Level Security UPDATE policy.'
+          'The boat could not be updated. No updated record was returned.'
         )
       }
 
-      // Update the card immediately
+      console.log(
+        'Updated boat:',
+        data
+      )
+
       setBoats(current =>
         current.map(boat =>
           boat.id === id
@@ -256,16 +313,16 @@ export default function BoatsBuiltAdminPage() {
       cancelEditing()
     } catch (err: any) {
       console.error(
-        'Update boat error:',
+        'Save edit error:',
         err
       )
 
       setError(
         err?.message ||
-          'Failed to update boat.'
+          'Failed to update boat information.'
       )
     } finally {
-      setSaving(false)
+      setSavingEdit(false)
     }
   }
 
@@ -274,36 +331,48 @@ export default function BoatsBuiltAdminPage() {
   ) {
     const confirmed =
       window.confirm(
-        `Are you sure you want to permanently delete "${boat.name || 'this boat'}"?`
+        `Are you sure you want to permanently delete "${
+          boat.name ||
+          'this boat'
+        }"?`
       )
 
     if (!confirmed) return
 
     setMessage('')
     setError('')
+    setDeletingId(boat.id)
 
     try {
       /*
-       * Delete image from storage first.
+       * Remove image from Supabase Storage
        */
+
       if (boat.image_url) {
         const marker =
           '/storage/v1/object/public/boats_built/'
 
         const position =
-          boat.image_url.indexOf(marker)
+          boat.image_url.indexOf(
+            marker
+          )
 
         if (position !== -1) {
           const filePath =
             boat.image_url.substring(
-              position + marker.length
+              position +
+                marker.length
             )
 
           const {
-            error: storageError,
-          } = await supabase.storage
-            .from('boats_built')
-            .remove([filePath])
+            error:
+              storageError,
+          } =
+            await supabase.storage
+              .from('boats_built')
+              .remove([
+                filePath,
+              ])
 
           if (storageError) {
             console.error(
@@ -314,28 +383,25 @@ export default function BoatsBuiltAdminPage() {
         }
       }
 
+      /*
+       * Delete database record
+       */
+
       const {
-        data,
         error: deleteError,
       } = await supabase
         .from('boats_built')
         .delete()
         .eq('id', boat.id)
-        .select('id')
 
       if (deleteError) {
         throw deleteError
       }
 
-      if (!data || data.length === 0) {
-        throw new Error(
-          'The boat was not deleted. Check your Supabase DELETE policy.'
-        )
-      }
-
       setBoats(current =>
         current.filter(
-          item => item.id !== boat.id
+          item =>
+            item.id !== boat.id
         )
       )
 
@@ -352,6 +418,8 @@ export default function BoatsBuiltAdminPage() {
         err?.message ||
           'Failed to delete boat.'
       )
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -360,222 +428,208 @@ export default function BoatsBuiltAdminPage() {
 
       {/* HEADER */}
 
-      <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-10">
+        <div>
 
-          <div>
+          <p className="text-sm uppercase tracking-[0.25em] text-blue-400 font-semibold">
+            DATA MARINE
+          </p>
 
-            <p className="text-sm uppercase tracking-[0.25em] text-blue-400 font-semibold">
-              DATA MARINE
-            </p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-2">
+            Boats We've Built
+          </h1>
 
-            <h1 className="text-4xl md:text-5xl font-bold mt-2">
-              Boats We've Built
-            </h1>
-
-            <p className="text-gray-400 mt-2">
-              Manage completed DATA MARINE boat builds.
-            </p>
-
-          </div>
-
-          <button
-            type="button"
-            onClick={loadBoats}
-            disabled={loading}
-            className="bg-slate-900 border border-slate-700 hover:border-blue-500 px-5 py-3 rounded-xl font-semibold transition disabled:opacity-50"
-          >
-            {loading
-              ? 'Refreshing...'
-              : '↻ Refresh'}
-          </button>
+          <p className="text-gray-400 mt-2">
+            Manage completed boats showcased by DATA MARINE.
+          </p>
 
         </div>
 
-        {/* MESSAGES */}
+        <button
+          type="button"
+          onClick={loadBoats}
+          disabled={loading}
+          className="bg-slate-900 border border-slate-700 hover:border-blue-500 px-5 py-3 rounded-xl font-semibold transition disabled:opacity-50"
+        >
+          {loading
+            ? 'Refreshing...'
+            : '↻ Refresh'}
+        </button>
 
-        {message && (
-          <div className="mb-6 bg-green-950/60 border border-green-800 text-green-300 rounded-xl p-4">
-            {message}
-          </div>
-        )}
+      </div>
 
-        {error && (
-          <div className="mb-6 bg-red-950/60 border border-red-800 text-red-300 rounded-xl p-4">
-            {error}
-          </div>
-        )}
+      {/* MESSAGES */}
 
-        {/* ADD BOAT */}
+      {message && (
+        <div className="max-w-5xl mb-6 bg-green-950 border border-green-800 text-green-300 rounded-xl p-4">
+          {message}
+        </div>
+      )}
 
-        <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 mb-12">
+      {error && (
+        <div className="max-w-5xl mb-6 bg-red-950 border border-red-800 text-red-300 rounded-xl p-4">
+          {error}
+        </div>
+      )}
 
-          <div className="mb-7">
+      {/* ADD BOAT */}
 
-            <p className="text-blue-400 text-xs uppercase tracking-[0.2em] font-semibold">
-              Boat Showcase
-            </p>
+      <section className="max-w-5xl bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 mb-12">
 
-            <h2 className="text-2xl md:text-3xl font-bold mt-1">
-              Add Completed Boat
-            </h2>
+        <div className="mb-6">
 
-            <p className="text-gray-500 mt-2">
-              Add the boat information and image that
-              should appear in the Boats We've Built
-              showcase.
-            </p>
+          <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+            Completed Project
+          </p>
 
-          </div>
+          <h2 className="text-2xl font-bold mt-1">
+            Add Boat
+          </h2>
 
-          <div className="grid lg:grid-cols-2 gap-8">
+          <p className="text-gray-500 mt-2">
+            Upload a completed boat picture.
+            You can edit the boat information afterwards.
+          </p>
 
-            {/* FORM */}
+        </div>
 
-            <div className="space-y-4">
+        {/* FILE PICKER */}
 
-              <input
-                type="text"
-                value={newName}
-                onChange={e =>
-                  setNewName(e.target.value)
-                }
-                placeholder="Boat Name"
-                className="w-full bg-black border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500"
-              />
+        <label
+          htmlFor="boat-picture"
+          className="flex flex-col items-center justify-center min-h-56 border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl cursor-pointer bg-black transition"
+        >
 
-              <input
-                type="text"
-                value={newType}
-                onChange={e =>
-                  setNewType(e.target.value)
-                }
-                placeholder="Boat Type"
-                className="w-full bg-black border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500"
-              />
+          <div className="text-center p-6">
 
-              <textarea
-                value={newDescription}
-                onChange={e =>
-                  setNewDescription(
-                    e.target.value
-                  )
-                }
-                placeholder="Boat Description"
-                rows={5}
-                className="w-full bg-black border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-blue-500 resize-none"
-              />
-
-              <label className="flex items-center gap-3 cursor-pointer">
-
-                <input
-                  type="checkbox"
-                  checked={newFeatured}
-                  onChange={e =>
-                    setNewFeatured(
-                      e.target.checked
-                    )
-                  }
-                  className="w-5 h-5 accent-blue-600"
-                />
-
-                <span className="font-semibold">
-                  Featured boat
-                </span>
-
-              </label>
-
+            <div className="text-5xl mb-4">
+              🚤
             </div>
 
-            {/* IMAGE */}
+            <p className="font-semibold">
+              {selectedFile
+                ? selectedFile.name
+                : 'Tap to choose a boat picture'}
+            </p>
 
-            <div>
-
-              <label
-                htmlFor="boat-picture"
-                className="flex flex-col items-center justify-center min-h-64 border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl cursor-pointer bg-black transition"
-              >
-
-                {preview ? (
-                  <img
-                    src={preview}
-                    alt="Boat preview"
-                    className="w-full h-64 object-contain rounded-xl"
-                  />
-                ) : (
-                  <div className="text-center p-6">
-
-                    <div className="text-5xl mb-4">
-                      🚤
-                    </div>
-
-                    <p className="font-semibold">
-                      Select Boat Image
-                    </p>
-
-                    <p className="text-sm text-gray-500 mt-2">
-                      PNG, JPG, JPEG or WEBP
-                    </p>
-
-                  </div>
-                )}
-
-                <input
-                  id="boat-picture"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
-              </label>
-
-              {selectedFile && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedFile(null)
-                    setPreview(null)
-                  }}
-                  className="text-red-400 hover:text-red-300 text-sm mt-3"
-                >
-                  Remove image
-                </button>
-              )}
-
-            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              PNG, JPG, JPEG or WEBP
+            </p>
 
           </div>
 
-          <button
-            type="button"
-            onClick={uploadBoat}
-            disabled={
-              !selectedFile ||
-              uploading
+          <input
+            id="boat-picture"
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={
+              handleFileChange
             }
-            className="w-full mt-8 bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading
-              ? 'Adding Boat...'
-              : 'Add Boat'}
-          </button>
+            className="hidden"
+          />
 
-        </section>
+        </label>
 
-        {/* BOATS */}
+        {/* PREVIEW */}
 
-        <section>
+        {preview && (
+          <div className="mt-6">
 
-          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
 
-            <p className="text-blue-400 text-xs uppercase tracking-[0.2em] font-semibold">
-              Your Collection
+              <h3 className="font-semibold">
+                Preview
+              </h3>
+
+              <button
+                type="button"
+                onClick={
+                  clearSelectedFile
+                }
+                className="text-red-400 hover:text-red-300 text-sm"
+              >
+                Remove
+              </button>
+
+            </div>
+
+            <div className="rounded-xl overflow-hidden border border-slate-800 bg-black">
+
+              <img
+                src={preview}
+                alt="Boat preview"
+                className="w-full max-h-[450px] object-contain"
+              />
+
+            </div>
+
+          </div>
+        )}
+
+        {/* FEATURED */}
+
+        <label className="flex items-center gap-3 mt-6 cursor-pointer">
+
+          <input
+            type="checkbox"
+            checked={featured}
+            onChange={e =>
+              setFeatured(
+                e.target.checked
+              )
+            }
+            className="w-5 h-5 accent-blue-600"
+          />
+
+          <div>
+
+            <span className="font-semibold">
+              Feature this boat
+            </span>
+
+            <p className="text-sm text-gray-500">
+              Featured boats can appear on the DATA MARINE homepage.
             </p>
 
-            <h2 className="text-3xl font-bold mt-1">
-              Completed Boats
+          </div>
+
+        </label>
+
+        {/* UPLOAD */}
+
+        <button
+          type="button"
+          onClick={
+            uploadBoat
+          }
+          disabled={
+            !selectedFile ||
+            uploading
+          }
+          className="w-full mt-6 bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {uploading
+            ? 'Uploading...'
+            : 'Upload Boat Picture'}
+        </button>
+
+      </section>
+
+      {/* BOATS */}
+
+      <section>
+
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+
+          <div>
+
+            <p className="text-blue-400 text-sm uppercase tracking-widest font-semibold">
+              Portfolio
+            </p>
+
+            <h2 className="text-2xl font-bold mt-1">
+              Your Boats
             </h2>
 
             <p className="text-gray-500 mt-1">
@@ -587,36 +641,63 @@ export default function BoatsBuiltAdminPage() {
 
           </div>
 
-          {loading &&
-            boats.length === 0 && (
-              <div className="text-center py-16 text-gray-500">
-                Loading boats...
+          <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+
+            <span className="text-gray-500 text-sm">
+              Featured
+            </span>
+
+            <span className="text-blue-400 font-bold ml-2">
+              {
+                boats.filter(
+                  boat =>
+                    boat.featured
+                ).length
+              }
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* LOADING */}
+
+        {loading &&
+          boats.length === 0 && (
+            <div className="text-center py-16 text-gray-500">
+              Loading boats...
+            </div>
+          )}
+
+        {/* EMPTY */}
+
+        {!loading &&
+          boats.length === 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
+
+              <div className="text-6xl mb-4">
+                🚤
               </div>
-            )}
 
-          {!loading &&
-            boats.length === 0 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
+              <h3 className="text-xl font-bold">
+                No boats yet
+              </h3>
 
-                <div className="text-6xl mb-4">
-                  🚤
-                </div>
+              <p className="text-gray-500 mt-2">
+                Upload your first completed boat above.
+              </p>
 
-                <h3 className="text-xl font-bold">
-                  No boats yet
-                </h3>
+            </div>
+          )}
 
-                <p className="text-gray-500 mt-2">
-                  Add your first completed boat above.
-                </p>
+        {/* GRID */}
 
-              </div>
-            )}
+        {boats.length > 0 && (
 
-          {boats.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-              {boats.map(boat => (
+            {boats.map(
+              boat => (
 
                 <div
                   key={boat.id}
@@ -628,18 +709,24 @@ export default function BoatsBuiltAdminPage() {
                   <div className="aspect-[4/3] bg-black">
 
                     {boat.image_url ? (
+
                       <img
-                        src={boat.image_url}
+                        src={
+                          boat.image_url
+                        }
                         alt={
                           boat.name ||
                           'Boat built by DATA MARINE'
                         }
                         className="w-full h-full object-cover"
                       />
+
                     ) : (
+
                       <div className="h-full flex items-center justify-center text-gray-600">
                         No image
                       </div>
+
                     )}
 
                   </div>
@@ -648,7 +735,10 @@ export default function BoatsBuiltAdminPage() {
 
                   <div className="p-5">
 
-                    {editingId === boat.id ? (
+                    {editingId ===
+                    boat.id ? (
+
+                      /* EDIT MODE */
 
                       <div>
 
@@ -658,40 +748,54 @@ export default function BoatsBuiltAdminPage() {
                             Edit Boat
                           </h3>
 
-                          <button
-                            type="button"
-                            onClick={cancelEditing}
-                            className="text-gray-500 hover:text-white"
-                          >
-                            ✕
-                          </button>
+                          <span className="text-xs text-blue-400 bg-blue-950 border border-blue-800 px-2 py-1 rounded-full">
+                            Editing
+                          </span>
 
                         </div>
 
+                        <label className="block text-sm text-gray-400 mb-2">
+                          Boat Name
+                        </label>
+
                         <input
-                          value={editName}
+                          value={
+                            editName
+                          }
                           onChange={e =>
                             setEditName(
                               e.target.value
                             )
                           }
                           placeholder="Boat Name"
-                          className="w-full bg-black border border-slate-700 rounded-lg p-3 mb-3 text-white outline-none focus:border-blue-500"
+                          className="w-full bg-black border border-slate-700 focus:border-blue-500 outline-none rounded-lg p-3 mb-4"
                         />
 
+                        <label className="block text-sm text-gray-400 mb-2">
+                          Boat Type
+                        </label>
+
                         <input
-                          value={editType}
+                          value={
+                            editType
+                          }
                           onChange={e =>
                             setEditType(
                               e.target.value
                             )
                           }
                           placeholder="Boat Type"
-                          className="w-full bg-black border border-slate-700 rounded-lg p-3 mb-3 text-white outline-none focus:border-blue-500"
+                          className="w-full bg-black border border-slate-700 focus:border-blue-500 outline-none rounded-lg p-3 mb-4"
                         />
 
+                        <label className="block text-sm text-gray-400 mb-2">
+                          Description
+                        </label>
+
                         <textarea
-                          value={editDescription}
+                          value={
+                            editDescription
+                          }
                           onChange={e =>
                             setEditDescription(
                               e.target.value
@@ -699,7 +803,7 @@ export default function BoatsBuiltAdminPage() {
                           }
                           placeholder="Boat Description"
                           rows={4}
-                          className="w-full bg-black border border-slate-700 rounded-lg p-3 mb-3 text-white outline-none focus:border-blue-500 resize-none"
+                          className="w-full bg-black border border-slate-700 focus:border-blue-500 outline-none rounded-lg p-3 mb-4 resize-none"
                         />
 
                         <label className="flex items-center gap-3 mb-5 cursor-pointer">
@@ -717,9 +821,17 @@ export default function BoatsBuiltAdminPage() {
                             className="w-5 h-5 accent-blue-600"
                           />
 
-                          <span>
-                            Featured
-                          </span>
+                          <div>
+
+                            <span className="font-semibold">
+                              Featured Boat
+                            </span>
+
+                            <p className="text-xs text-gray-500">
+                              Show this boat in the homepage featured section.
+                            </p>
+
+                          </div>
 
                         </label>
 
@@ -732,10 +844,12 @@ export default function BoatsBuiltAdminPage() {
                                 boat.id
                               )
                             }
-                            disabled={saving}
-                            className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold disabled:opacity-50"
+                            disabled={
+                              savingEdit
+                            }
+                            className="bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition disabled:opacity-50"
                           >
-                            {saving
+                            {savingEdit
                               ? 'Saving...'
                               : 'Save Changes'}
                           </button>
@@ -745,8 +859,10 @@ export default function BoatsBuiltAdminPage() {
                             onClick={
                               cancelEditing
                             }
-                            disabled={saving}
-                            className="bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-semibold disabled:opacity-50"
+                            disabled={
+                              savingEdit
+                            }
+                            className="bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-semibold transition disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -757,32 +873,52 @@ export default function BoatsBuiltAdminPage() {
 
                     ) : (
 
+                      /* NORMAL MODE */
+
                       <>
 
-                        {boat.featured && (
-                          <span className="inline-block bg-yellow-400 text-black px-3 py-1 rounded-full text-xs font-bold mb-3">
-                            ★ Featured
+                        <div className="flex items-start justify-between gap-3">
+
+                          <div>
+
+                            {boat.featured && (
+                              <span className="inline-block bg-yellow-400 text-black px-2.5 py-1 rounded-full text-xs font-bold mb-3">
+                                ★ Featured
+                              </span>
+                            )}
+
+                            <h3 className="font-bold text-xl">
+                              {boat.name ||
+                                'Boat Built by DATA MARINE'}
+                            </h3>
+
+                            {boat.type && (
+                              <p className="text-blue-400 text-sm font-semibold mt-1">
+                                {boat.type}
+                              </p>
+                            )}
+
+                          </div>
+
+                          <span className="text-slate-600 text-xs">
+                            #{boat.id}
                           </span>
-                        )}
 
-                        <h3 className="font-bold text-xl">
-                          {boat.name ||
-                            'Boat Built by DATA MARINE'}
-                        </h3>
-
-                        {boat.type && (
-                          <p className="text-blue-400 text-sm font-semibold mt-1">
-                            {boat.type}
-                          </p>
-                        )}
+                        </div>
 
                         {boat.description && (
-                          <p className="text-gray-500 text-sm mt-3 line-clamp-3">
+                          <p className="text-gray-500 text-sm mt-4 leading-6">
                             {boat.description}
                           </p>
                         )}
 
-                        <div className="grid grid-cols-2 gap-3 mt-5">
+                        {!boat.description && (
+                          <p className="text-gray-600 text-sm mt-4 italic">
+                            No description added yet.
+                          </p>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3 mt-6">
 
                           <button
                             type="button"
@@ -803,9 +939,16 @@ export default function BoatsBuiltAdminPage() {
                                 boat
                               )
                             }
-                            className="bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 py-3 rounded-lg font-semibold transition"
+                            disabled={
+                              deletingId ===
+                              boat.id
+                            }
+                            className="bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 py-3 rounded-lg font-semibold transition disabled:opacity-50"
                           >
-                            🗑️ Delete
+                            {deletingId ===
+                            boat.id
+                              ? 'Deleting...'
+                              : '🗑️ Delete'}
                           </button>
 
                         </div>
@@ -818,14 +961,14 @@ export default function BoatsBuiltAdminPage() {
 
                 </div>
 
-              ))}
+              )
+            )}
 
-            </div>
-          )}
+          </div>
 
-        </section>
+        )}
 
-      </div>
+      </section>
 
     </main>
   )
