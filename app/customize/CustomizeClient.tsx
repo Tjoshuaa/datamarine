@@ -168,9 +168,16 @@ export default function CustomizeClient() {
       boatsRes.data || []
     )
 
-    setEngines(
-      enginesRes.data || []
-    )
+   const uniqueEngines = Array.from(
+  new Map(
+    (enginesRes.data || []).map((engine) => [
+      `${engine.name}|${engine.horsepower}|${engine.stroke_type}|${engine.price}|${engine.is_new}`,
+      engine
+    ])
+  ).values()
+)
+
+setEngines(uniqueEngines)
 
     setLoading(false)
   }
@@ -1172,14 +1179,64 @@ export default function CustomizeClient() {
 
                 {selectedBoat?.image_url && (
 
-                  <div className="relative bg-white rounded-2xl overflow-hidden p-2">
+  <div
+    className="relative rounded-2xl overflow-hidden p-3 transition-all duration-500"
+    style={{
+      background: `
+        linear-gradient(
+          135deg,
+          ${color} 0%,
+          ${color}cc 45%,
+          #020617 100%
+        )
+      `,
+      boxShadow: `0 12px 40px ${color}55`
+    }}
+  >
 
-                    <div
-                      className="absolute inset-0 opacity-20 transition-colors duration-500"
-                      style={{
-                        backgroundColor:
-                          color
-                      }}
+    {/* Bright color atmosphere */}
+
+    <div
+      className="absolute inset-0 transition-all duration-500"
+      style={{
+        background: `
+          radial-gradient(
+            circle at 50% 45%,
+            #ffffff35 0%,
+            transparent 45%
+          )
+        `
+      }}
+    />
+
+    {/* Color indicator */}
+
+    <div
+      className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20"
+    >
+
+      <span
+        className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+        style={{
+          backgroundColor: color
+        }}
+      />
+
+      <span className="text-xs font-semibold text-white">
+        {selectedColorName}
+      </span>
+
+    </div>
+
+    <img
+      src={selectedBoat.image_url}
+      alt={selectedBoat.name}
+      className="relative z-10 w-full h-40 object-contain drop-shadow-2xl"
+    />
+
+  </div>
+
+)}
                     />
 
                     <img
