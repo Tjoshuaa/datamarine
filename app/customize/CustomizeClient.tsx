@@ -1178,61 +1178,52 @@ setEngines(uniqueEngines)
               <div className="p-6 space-y-5">
 
                 {selectedBoat?.image_url && (
-
   <div
     className="relative rounded-2xl overflow-hidden p-3 transition-all duration-500"
     style={{
-      background: `
-        linear-gradient(
-          135deg,
-          ${color} 0%,
-          ${color}cc 45%,
-          #020617 100%
-        )
-      `,
-      boxShadow: `0 12px 40px ${color}55`
+      background: `linear-gradient(
+        135deg,
+        ${color} 0%,
+        ${color}cc 45%,
+        #020617 100%
+      )`,
+      boxShadow: `0 12px 40px ${color}55`,
     }}
   >
-
     {/* Bright color atmosphere */}
-
     <div
       className="absolute inset-0 transition-all duration-500"
       style={{
-        background: `
-          radial-gradient(
-            circle at 50% 45%,
-            #ffffff35 0%,
-            transparent 45%
-          )
-        `
+        background: `radial-gradient(
+          circle at 50% 45%,
+          #ffffff35 0%,
+          transparent 45%
+        )`,
       }}
     />
 
-    {/* Color indicator */}
-
-    <div
-      className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20"
-    >
-
+    {/* Selected color indicator */}
+    <div className="absolute top-3 right-3 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/20">
       <span
         className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
         style={{
-          backgroundColor: color
+          backgroundColor: color,
         }}
       />
 
       <span className="text-xs font-semibold text-white">
         {selectedColorName}
       </span>
-
     </div>
 
+    {/* Boat image */}
     <img
       src={selectedBoat.image_url}
       alt={selectedBoat.name}
       className="relative z-10 w-full h-40 object-contain drop-shadow-2xl"
     />
+  </div>
+)}
 
   </div>
 
